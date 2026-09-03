@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-client/node_modules/
+client/node_modules/F
 server/node_modules/
 
 # Production builds
@@ -87,7 +87,7 @@ typings/
 
 # Gatsby files
 .cache/
-public
+/public
 
 # Vuepress build output
 .vuepress/dist
