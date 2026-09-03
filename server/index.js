@@ -4,6 +4,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 require("dotenv").config();
 
+const pool = require("./db");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -45,4 +47,14 @@ app.use("*", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📱 Health check: http://localhost:${PORT}/api/health`);
+
+  // Temporary: verify PostgreSQL connection
+  pool
+    .query("SELECT NOW()")
+    .then((result) => {
+      console.log("PostgreSQL connected:", result.rows[0].now);
+    })
+    .catch((err) => {
+      console.error("PostgreSQL connection error:", err.message);
+    });
 });
