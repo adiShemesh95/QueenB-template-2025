@@ -18,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/users", require("./routes/users"));
+// TODO: Attach auth middleware (sets req.user) before matching routes once auth lands.
+app.use("/api/matching", require("./routes/matching"));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
