@@ -19,6 +19,25 @@ async function createMatching(menteeId, mentorId) {
   return result.rows[0];
 }
 
+/**
+ * Returns matching requests for a mentee, newest first.
+ *
+ * @param {number} menteeId - Authenticated mentee user id
+ * @returns {Promise<object[]>} Matching rows for that mentee
+ */
+async function getMatchingsByMentee(menteeId) {
+  const result = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE mentee_id = $1
+     ORDER BY created_at DESC`,
+    [menteeId]
+  );
+
+  return result.rows;
+}
+
 module.exports = {
   createMatching,
+  getMatchingsByMentee,
 };
