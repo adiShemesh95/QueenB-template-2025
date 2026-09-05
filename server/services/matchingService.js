@@ -37,7 +37,26 @@ async function getMatchingsByMentee(menteeId) {
   return result.rows;
 }
 
+/**
+ * Returns a single matching request if it belongs to the given mentee.
+ *
+ * @param {number} matchingId - Matching row id
+ * @param {number} menteeId - Authenticated mentee user id
+ * @returns {Promise<object|undefined>} The matching row, or undefined if not found / not owned
+ */
+async function getMatchingByIdForMentee(matchingId, menteeId) {
+  const result = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE id = $1 AND mentee_id = $2`,
+    [matchingId, menteeId]
+  );
+
+  return result.rows[0];
+}
+
 module.exports = {
   createMatching,
   getMatchingsByMentee,
+  getMatchingByIdForMentee,
 };

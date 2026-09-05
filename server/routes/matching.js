@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   createMatching,
   getMatchingsByMentee,
+  getMatchingByIdForMentee,
 } = require("../services/matchingService");
 
 // TODO: Wire team auth middleware so req.user is set from the session/JWT.
@@ -22,6 +23,34 @@ router.get("/", async (req, res) => {
   } catch (err) {
     console.error("GET /api/matching failed:", err.message);
     return res.status(500).json({ error: "Failed to fetch matchings" });
+  }
+});
+
+// GET /api/matching/:id - Get one matching request owned by the authenticated mentee
+router.get("/:id", async (req, res) => {
+  try {
+    const menteeId = req.user?.id;
+
+    if (menteeId == null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchingId = Number(req.params.id);
+
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res.status(400).json({ error: "Valid matching id is required" });
+    }
+
+    const matching = await getMatchingByIdForMentee(matchingId, Number(menteeId));
+
+    if (!matching) {
+      return res.status(404).json({ error: "Matching not found" });
+    }
+
+    return res.status(200).json(matching);
+  } catch (err) {
+    console.error("GET /api/matching/:id failed:", err.message);
+    return res.status(500).json({ error: "Failed to fetch matching" });
   }
 });
 
