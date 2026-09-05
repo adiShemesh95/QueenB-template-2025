@@ -18,10 +18,12 @@ CREATE TABLE IF NOT EXISTS matching (
   mentee_id INTEGER NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'PENDING_MENTOR',
   selected_slot_id INTEGER NULL,
+  more_times_requested BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-`;
+ALTER TABLE matching
+ADD COLUMN IF NOT EXISTS more_times_requested BOOLEAN NOT NULL DEFAULT FALSE;`;
 
 async function initMatchingTable() {
   try {
