@@ -78,9 +78,53 @@ async function getMatchingByIdForMentee(matchingId, menteeId) {
   return result.rows[0];
 }
 
+/**
+ * Mentee requests additional time slots from the mentor (once per matching).
+ * Allowed only when status is PENDING_MENTEE and more_times_requested is false.
+ *
+ * @param {number} matchingId
+ * @param {number} menteeId
+ * @returns {Promise<{ matching: object } | { error: string }>}
+ */
+async function requestMoreTimes(matchingId, menteeId) {
+  const matching = await getMatchingByIdForMentee(matchingId, menteeId);
+
+  if (!matching) {
+    return { error: "NOT_FOUND" };
+  }
+
+  if (matching.more_times_requested) {
+    return { error: "ALREADY_REQUESTED" };
+  }
+
+  if (matching.status !== "PENDING_MENTEE") {
+    return { error: "INVALID_STATUS" };
+  }
+
+  const result = await pool.query(
+    `UPDATE matching
+     SET more_times_requested = true,
+         status = 'PENDING_MENTOR',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND mentee_id = $2
+       AND status = 'PENDING_MENTEE'
+       AND more_times_requested = false
+     RETURNING *`,
+    [matchingId, menteeId]
+  );
+
+  if (!result.rows[0]) {
+    return { error: "NOT_FOUND" };
+  }
+
+  return { matching: result.rows[0] };
+}
+
 module.exports = {
   createMatching,
   findActiveMatching,
   getMatchingsByMentee,
   getMatchingByIdForMentee,
+  requestMoreTimes,
 };
