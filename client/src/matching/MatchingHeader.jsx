@@ -119,9 +119,6 @@ function MatchingHeader() {
               >
                 {username}
               </Typography>
-              <Typography sx={{ fontSize: "0.7rem", color: "#6B7280" }}>
-                {t.mockUserRole}
-              </Typography>
             </Box>
           </Box>
 
