@@ -19,6 +19,29 @@ async function createMatching(menteeId, mentorId) {
   return result.rows[0];
 }
 
+const ACTIVE_STATUSES = ["PENDING_MENTOR", "PENDING_MENTEE", "MATCHED"];
+
+/**
+ * Finds an active matching request between a mentee and mentor, if any.
+ * Active statuses: PENDING_MENTOR, PENDING_MENTEE, MATCHED (not REJECTED).
+ *
+ * @param {number} menteeId
+ * @param {number} mentorId
+ * @returns {Promise<object|undefined>} Existing active matching row, or undefined
+ */
+async function findActiveMatching(menteeId, mentorId) {
+  const result = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE mentee_id = $1
+       AND mentor_id = $2
+       AND status = ANY($3::varchar[])`,
+    [menteeId, mentorId, ACTIVE_STATUSES]
+  );
+
+  return result.rows[0];
+}
+
 /**
  * Returns matching requests for a mentee, newest first.
  *
@@ -57,6 +80,7 @@ async function getMatchingByIdForMentee(matchingId, menteeId) {
 
 module.exports = {
   createMatching,
+  findActiveMatching,
   getMatchingsByMentee,
   getMatchingByIdForMentee,
 };

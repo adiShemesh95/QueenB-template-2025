@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   createMatching,
+  findActiveMatching,
   getMatchingsByMentee,
   getMatchingByIdForMentee,
 } = require("../services/matchingService");
@@ -72,6 +73,13 @@ router.post("/", async (req, res) => {
     if (Number(mentorId) === Number(menteeId)) {
       return res.status(400).json({
         error: "You cannot request mentoring from yourself"
+      });
+    }
+
+    const existing = await findActiveMatching(Number(menteeId), Number(mentorId));
+    if (existing) {
+      return res.status(409).json({
+        error: "An active matching request with this mentor already exists"
       });
     }
 
