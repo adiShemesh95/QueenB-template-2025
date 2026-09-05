@@ -2,19 +2,30 @@ import React from "react";
 import { AppBar, Avatar, Box, Toolbar, Typography } from "@mui/material";
 import LanguageSelector from "../components/home/LanguageSelector";
 import { useMatchingLanguage } from "./MatchingLanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Temporary matching toolbar.
  * Isolated here so it can later be replaced by the shared app header
  * without rewriting matching pages.
  */
+function getUsernameInitials(username) {
+  const name = String(username || "").trim();
+  if (!name) return "?";
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
+  return name.slice(0, 2).toUpperCase();
+}
+
 function MatchingHeader() {
   const { language, setLanguage, t } = useMatchingLanguage();
-  const initials = t.mockUserName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
+  const { user } = useAuth();
+  const username = user?.username || "";
+  const initials = getUsernameInitials(username);
 
   return (
     <AppBar
@@ -106,7 +117,7 @@ function MatchingHeader() {
                   color: "#07142D",
                 }}
               >
-                {t.mockUserName}
+                {username}
               </Typography>
               <Typography sx={{ fontSize: "0.7rem", color: "#6B7280" }}>
                 {t.mockUserRole}

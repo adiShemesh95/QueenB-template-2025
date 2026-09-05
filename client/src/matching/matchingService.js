@@ -1,12 +1,12 @@
+import axios from "axios";
 import { MOCK_REQUESTS } from "./mockData";
 import { REQUEST_STATUS } from "./constants";
 
 /**
  * Matching data access layer.
  *
- * Today this reads/mutates in-memory mock data.
- * Later, replace the function bodies with API calls (e.g. axios)
- * without changing page/component contracts.
+ * getRequests() calls the real backend.
+ * Other Matching flows still use in-memory mock data until their APIs land.
  *
  * Contract:
  *   getRequests()            -> Promise<Request[]>
@@ -14,6 +14,10 @@ import { REQUEST_STATUS } from "./constants";
  *   selectTimeSlot(id, slotId) -> Promise<Request>
  *   requestMoreTimes(id)     -> Promise<Request>
  */
+
+const matchingClient = axios.create({
+  withCredentials: true,
+});
 
 let requestsStore = structuredClone(MOCK_REQUESTS);
 
@@ -30,9 +34,32 @@ function delay(ms = 120) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Maps a matching table row from GET /api/matching to the UI Request shape.
+ * Mentor profile / slots are not part of this endpoint yet.
+ */
+function mapMatchingRow(row) {
+  return {
+    id: row.id,
+    status: row.status,
+    requestedAt: row.created_at,
+    mentor: {
+      id: row.mentor_id,
+      name: null,
+      avatarUrl: null,
+    },
+    suggestedSlots: [],
+    selectedSlot: null,
+    meetingAt: null,
+    moreTimesRequested: Boolean(row.more_times_requested),
+  };
+}
+
+/** Fetches the logged-in mentee's matching requests from the backend. */
 export async function getRequests() {
-  await delay();
-  return structuredClone(requestsStore);
+  const response = await matchingClient.get("/api/matching");
+  const rows = Array.isArray(response.data) ? response.data : [];
+  return rows.map(mapMatchingRow);
 }
 
 export async function getRequestById(id) {
