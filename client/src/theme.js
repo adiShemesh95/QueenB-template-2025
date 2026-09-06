@@ -3,26 +3,68 @@ import { createTheme } from "@mui/material";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#6366f1",
+      main: "#F75F8A",
+      light: "#FF6F91",
+      dark: "#E04872",
+      contrastText: "#FFFFFF",
     },
     secondary: {
-      main: "#ec4899",
+      main: "#8DD8F7",
+      light: "#B8E7FA",
+      dark: "#5BC4EF",
+      contrastText: "#07142D",
+    },
+    text: {
+      primary: "#07142D",
+      secondary: "#4A5568",
     },
     background: {
-      default: "#f8fafc",
+      default: "#F8FBFF",
+      paper: "#FFFFFF",
     },
   },
   typography: {
-    fontFamily: "Roboto, Arial, sans-serif",
+    fontFamily: '"Heebo", "Plus Jakarta Sans", "Helvetica Neue", sans-serif',
+    h1: {
+      fontWeight: 700,
+      letterSpacing: "-0.02em",
+    },
     h4: {
       fontWeight: 600,
     },
     h6: {
       fontWeight: 500,
     },
+    button: {
+      textTransform: "none",
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 16,
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: "#F8FBFF",
+        },
+      },
+    },
+    MuiButtonBase: {
+      defaultProps: {
+        disableRipple: false,
+      },
+      styleOverrides: {
+        root: {
+          "&:focus-visible": {
+            outline: "2px solid #F75F8A",
+            outlineOffset: "3px",
+          },
+        },
+      },
+    },
   },
 });
 
 export default theme;
-
-
