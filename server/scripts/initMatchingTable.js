@@ -8,9 +8,7 @@ require("dotenv").config();
 const pool = require("../db");
 
 const createMatchingTableSQL = `
--- TODO: Add foreign keys once related tables exist locally:
---   mentor_id       -> users.id
---   mentee_id       -> users.id
+-- TODO: Add foreign key once related table exists locally:
 --   selected_slot_id -> matching_slots.id
 CREATE TABLE IF NOT EXISTS matching (
   id SERIAL PRIMARY KEY,
@@ -23,11 +21,40 @@ CREATE TABLE IF NOT EXISTS matching (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE matching
-ADD COLUMN IF NOT EXISTS more_times_requested BOOLEAN NOT NULL DEFAULT FALSE;`;
+ADD COLUMN IF NOT EXISTS more_times_requested BOOLEAN NOT NULL DEFAULT FALSE;
+`;
+
+const addForeignKeyIfMissingSQL = `
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'matching_mentor_id_fkey'
+      AND conrelid = 'matching'::regclass
+  ) THEN
+    ALTER TABLE matching
+      ADD CONSTRAINT matching_mentor_id_fkey
+      FOREIGN KEY (mentor_id) REFERENCES users (id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'matching_mentee_id_fkey'
+      AND conrelid = 'matching'::regclass
+  ) THEN
+    ALTER TABLE matching
+      ADD CONSTRAINT matching_mentee_id_fkey
+      FOREIGN KEY (mentee_id) REFERENCES users (id);
+  END IF;
+END $$;
+`;
 
 async function initMatchingTable() {
   try {
     await pool.query(createMatchingTableSQL);
+    await pool.query(addForeignKeyIfMissingSQL);
     console.log("matching table is ready (created if it did not exist).");
   } catch (err) {
     console.error("Failed to initialize matching table:", err.message);
