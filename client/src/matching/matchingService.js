@@ -5,7 +5,7 @@ import { REQUEST_STATUS } from "./constants";
 /**
  * Matching data access layer.
  *
- * getRequests() calls the real backend.
+ * getRequests() and getRequestById() call the real backend.
  * Other Matching flows still use in-memory mock data until their APIs land.
  *
  * Contract:
@@ -62,10 +62,17 @@ export async function getRequests() {
   return rows.map(mapMatchingRow);
 }
 
+/** Fetches one matching request owned by the logged-in mentee. */
 export async function getRequestById(id) {
-  await delay();
-  const request = requestsStore.find((item) => item.id === id);
-  return request ? structuredClone(request) : null;
+  try {
+    const response = await matchingClient.get(`/api/matching/${id}`);
+    return mapMatchingRow(response.data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
