@@ -1,14 +1,23 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+} from "react-router-dom";
+
 import { ThemeProvider, CssBaseline } from "@mui/material";
 
 import theme from "./theme";
+
 import { AuthProvider } from "./context/AuthContext";
 
 import Home from "./components/home/Home";
 import SignUpPage from "./components/auth/SignUpPage";
 import SignInPage from "./components/auth/SignInPage";
+
 import ProtectedRoute, { GuestRoute } from "./components/auth/ProtectedRoute";
+
 import Dashboard from "./components/Dashboard";
 
 import MyRequestsPage from "./matching/MyRequestsPage";
