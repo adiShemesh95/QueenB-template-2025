@@ -5,8 +5,8 @@ import { REQUEST_STATUS } from "./constants";
 /**
  * Matching data access layer.
  *
- * getRequests() and getRequestById() call the real backend.
- * Other Matching flows still use in-memory mock data until their APIs land.
+ * getRequests(), getRequestById(), and requestMoreTimes() call the real backend.
+ * selectTimeSlot() still uses in-memory mock data until its API lands.
  *
  * Contract:
  *   getRequests()            -> Promise<Request[]>
@@ -103,24 +103,13 @@ export async function selectTimeSlot(requestId, slotId) {
 
 /**
  * Mentee asks the mentor for additional times (once per request).
- * Replace with a real API call later; keep the same return shape.
+ * POST /api/matching/:id/request-more-times
  */
 export async function requestMoreTimes(requestId) {
-  await delay();
-  const request = findRequestOrThrow(requestId);
-
-  if (request.status !== REQUEST_STATUS.PENDING_MENTEE) {
-    throw new Error(
-      "Additional times can only be requested while choosing a slot."
-    );
-  }
-
-  if (request.moreTimesRequested) {
-    throw new Error("Additional times were already requested for this meeting.");
-  }
-
-  request.moreTimesRequested = true;
-  return structuredClone(request);
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/request-more-times`
+  );
+  return mapMatchingRow(response.data);
 }
 
 /** Test helper — resets mock store to the initial seed data. */
