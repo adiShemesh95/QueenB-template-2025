@@ -45,7 +45,14 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <GuestRoute>
+                  <Home />
+                </GuestRoute>
+              }
+            />
 
             <Route
               path="/register"
