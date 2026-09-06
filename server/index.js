@@ -1,3 +1,8 @@
+const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+const morgan = require("morgan");
+
 const app = require("./app");
 const pool = require("./db");
 
@@ -12,12 +17,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/users", require("./routes/users"));
+
 // TODO: Attach auth middleware (sets req.user) before matching routes once auth lands.
 app.use("/api/matching", require("./routes/matching"));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ 
+  res.json({
     message: "QueenB Server is running!",
     timestamp: new Date().toISOString(),
     status: "healthy",
