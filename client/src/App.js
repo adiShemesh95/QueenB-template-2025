@@ -24,6 +24,11 @@ import MyRequestsPage from "./matching/MyRequestsPage";
 import RequestDetailsPage from "./matching/RequestDetailsPage";
 import { MatchingLanguageProvider } from "./matching/MatchingLanguageContext";
 
+import MentorsDirectoryPage from "./mentor/MentorsDirectoryPage";
+import MentorProfileDetailPage from "./mentor/MentorProfileDetailPage";
+import BecomeMentorPage from "./mentor/BecomeMentorPage";
+import MentorDashboardPage from "./mentor/MentorDashboardPage";
+
 function MatchingRoutes() {
   return (
     <MatchingLanguageProvider>
@@ -83,6 +88,38 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RequestDetailsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mentors"
+                element={
+                  <ProtectedRoute>
+                    <MentorsDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mentors/:id"
+                element={
+                  <ProtectedRoute>
+                    <MentorProfileDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/become-mentor"
+                element={
+                  <ProtectedRoute>
+                    <BecomeMentorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mentor-inbox"
+                element={
+                  <ProtectedRoute>
+                    <MentorDashboardPage />
                   </ProtectedRoute>
                 }
               />

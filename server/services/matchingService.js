@@ -16,7 +16,7 @@ async function createMatching(menteeId, mentorId) {
     [menteeId, mentorId]
   );
 
-  return result.rows[0];
+  return enrichMatching(result.rows[0]);
 }
 
 const ACTIVE_STATUSES = ["PENDING_MENTOR", "PENDING_MENTEE", "MATCHED"];
@@ -43,6 +43,57 @@ async function findActiveMatching(menteeId, mentorId) {
 }
 
 /**
+ * Attaches mentor display fields and suggested slots for mentee UI.
+ */
+async function enrichMatching(matching) {
+  if (!matching) return matching;
+
+  const mentorResult = await pool.query(
+    `SELECT u.username,
+            mp.profile_image_url
+     FROM users u
+     LEFT JOIN mentor_profiles mp ON mp.user_id = u.id
+     WHERE u.id = $1`,
+    [matching.mentor_id]
+  );
+  const mentorRow = mentorResult.rows[0] || {};
+
+  const slotsResult = await pool.query(
+    `SELECT id, matching_id, start_time, end_time, is_selected
+     FROM matching_slots
+     WHERE matching_id = $1
+     ORDER BY start_time ASC`,
+    [matching.id]
+  );
+
+  const suggestedSlots = slotsResult.rows.map((slot) => ({
+    id: slot.id,
+    start: slot.start_time,
+    end: slot.end_time,
+    isSelected: Boolean(slot.is_selected),
+  }));
+
+  const selectedSlot =
+    suggestedSlots.find((slot) => slot.isSelected) ||
+    (matching.selected_slot_id
+      ? suggestedSlots.find((slot) => slot.id === matching.selected_slot_id)
+      : null) ||
+    null;
+
+  return {
+    ...matching,
+    mentor_username: mentorRow.username || null,
+    mentor_profile_image_url: mentorRow.profile_image_url || null,
+    suggested_slots: suggestedSlots,
+    selected_slot: selectedSlot,
+  };
+}
+
+async function enrichMatchings(matchings) {
+  return Promise.all(matchings.map((row) => enrichMatching(row)));
+}
+
+/**
  * Returns matching requests for a mentee, newest first.
  *
  * @param {number} menteeId - Authenticated mentee user id
@@ -57,7 +108,7 @@ async function getMatchingsByMentee(menteeId) {
     [menteeId]
   );
 
-  return result.rows;
+  return enrichMatchings(result.rows);
 }
 
 /**
@@ -75,7 +126,8 @@ async function getMatchingByIdForMentee(matchingId, menteeId) {
     [matchingId, menteeId]
   );
 
-  return result.rows[0];
+  if (!result.rows[0]) return undefined;
+  return enrichMatching(result.rows[0]);
 }
 
 /**
@@ -118,7 +170,7 @@ async function requestMoreTimes(matchingId, menteeId) {
     return { error: "NOT_FOUND" };
   }
 
-  return { matching: result.rows[0] };
+  return { matching: await enrichMatching(result.rows[0]) };
 }
 
 module.exports = {

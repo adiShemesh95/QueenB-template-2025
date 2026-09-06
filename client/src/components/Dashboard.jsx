@@ -5,10 +5,17 @@ import {
   Toolbar,
   Typography,
   Button,
+  Stack,
 } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import UserManagement from "./UserManagement";
 import { useAuth } from "../context/AuthContext";
+
+const navLinkSx = {
+  textTransform: "none",
+  color: "inherit",
+  fontWeight: 600,
+};
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -33,7 +40,7 @@ function Dashboard() {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static" elevation={2}>
-        <Toolbar sx={{ gap: 1.5 }}>
+        <Toolbar sx={{ gap: 1.5, flexWrap: "wrap" }}>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             👑 QueenB - Example Bar
           </Typography>
@@ -42,13 +49,20 @@ function Dashboard() {
               {user.username}
             </Typography>
           ) : null}
-          <Button
-            component={RouterLink}
-            to="/"
-            color="inherit"
-            sx={{ textTransform: "none" }}
-          >
+          <Button component={RouterLink} to="/" sx={navLinkSx}>
             Home
+          </Button>
+          <Button component={RouterLink} to="/mentors" sx={navLinkSx}>
+            Mentors
+          </Button>
+          <Button component={RouterLink} to="/my-requests" sx={navLinkSx}>
+            My Requests
+          </Button>
+          <Button component={RouterLink} to="/mentor-inbox" sx={navLinkSx}>
+            Mentor Inbox
+          </Button>
+          <Button component={RouterLink} to="/become-mentor" sx={navLinkSx}>
+            Become Mentor
           </Button>
           <Button
             onClick={handleLogout}
@@ -69,6 +83,54 @@ function Dashboard() {
           {logoutError}
         </Typography>
       ) : null}
+      <Box sx={{ px: { xs: 2, sm: 4 }, pt: 3 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{ mb: 2 }}
+        >
+          <Button
+            component={RouterLink}
+            to="/mentors"
+            variant="contained"
+            sx={{
+              borderRadius: 3,
+              background: "linear-gradient(135deg, #FF6F91, #F75F8A)",
+              boxShadow: "0 8px 20px rgba(247, 95, 138, 0.22)",
+            }}
+          >
+            Browse mentors
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/become-mentor"
+            variant="outlined"
+            sx={{
+              borderRadius: 3,
+              borderColor: "#F75F8A",
+              color: "#F75F8A",
+            }}
+          >
+            Become a mentor
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/mentor-inbox"
+            variant="outlined"
+            sx={{ borderRadius: 3 }}
+          >
+            Mentor inbox
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/my-requests"
+            variant="outlined"
+            sx={{ borderRadius: 3 }}
+          >
+            My requests
+          </Button>
+        </Stack>
+      </Box>
       <UserManagement />
     </Box>
   );

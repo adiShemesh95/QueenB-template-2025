@@ -7,6 +7,7 @@ const {
   getMatchingByIdForMentee,
   requestMoreTimes,
 } = require("../services/matchingService");
+const { getMentorProfileByUserId } = require("../services/mentorsService");
 
 // TODO: Wire team auth middleware so req.user is set from the session/JWT.
 // Until then, this route expects req.user.id (mentee) and returns 401 if missing.
@@ -114,6 +115,13 @@ router.post("/", async (req, res) => {
     if (Number(mentorId) === Number(menteeId)) {
       return res.status(400).json({
         error: "You cannot request mentoring from yourself"
+      });
+    }
+
+    const mentorProfile = await getMentorProfileByUserId(Number(mentorId));
+    if (!mentorProfile || !mentorProfile.isActive) {
+      return res.status(404).json({
+        error: "Active mentor profile not found"
       });
     }
 

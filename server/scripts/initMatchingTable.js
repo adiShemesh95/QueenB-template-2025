@@ -8,10 +8,8 @@ require("dotenv").config();
 const pool = require("../db");
 
 const createMatchingTableSQL = `
--- TODO: Add foreign keys once related tables exist locally:
---   mentor_id       -> users.id
---   mentee_id       -> users.id
---   selected_slot_id -> matching_slots.id
+-- selected_slot_id can reference matching_slots.id after that table exists
+-- (see scripts/initMentorTables.js). FKs to users can be added later.
 CREATE TABLE IF NOT EXISTS matching (
   id SERIAL PRIMARY KEY,
   mentor_id INTEGER NOT NULL,

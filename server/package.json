@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "NODE_ENV=test jest --runInBand --forceExit"
+    "test": "NODE_ENV=test jest --runInBand --forceExit",
+    "db:init-matching": "node scripts/initMatchingTable.js",
+    "db:init-mentors": "node scripts/initMentorTables.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

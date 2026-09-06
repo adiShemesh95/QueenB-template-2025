@@ -36,21 +36,43 @@ function delay(ms = 120) {
 
 /**
  * Maps a matching table row from GET /api/matching to the UI Request shape.
- * Mentor profile / slots are not part of this endpoint yet.
+ * Enriched responses may include mentor display fields and suggested_slots.
  */
 function mapMatchingRow(row) {
+  const slots = Array.isArray(row.suggested_slots)
+    ? row.suggested_slots
+    : Array.isArray(row.suggestedSlots)
+      ? row.suggestedSlots
+      : [];
+
+  const mappedSlots = slots.map((slot) => ({
+    id: slot.id,
+    start: slot.start || slot.start_time,
+    end: slot.end || slot.end_time,
+  }));
+
+  const selectedSlotRaw = row.selected_slot || row.selectedSlot || null;
+  const selectedSlot = selectedSlotRaw
+    ? {
+        id: selectedSlotRaw.id,
+        start: selectedSlotRaw.start || selectedSlotRaw.start_time,
+        end: selectedSlotRaw.end || selectedSlotRaw.end_time,
+      }
+    : null;
+
   return {
     id: row.id,
     status: row.status,
     requestedAt: row.created_at,
     mentor: {
       id: row.mentor_id,
-      name: null,
-      avatarUrl: null,
+      name: row.mentor_username || row.mentor?.name || null,
+      avatarUrl:
+        row.mentor_profile_image_url || row.mentor?.avatarUrl || null,
     },
-    suggestedSlots: [],
-    selectedSlot: null,
-    meetingAt: null,
+    suggestedSlots: mappedSlots,
+    selectedSlot,
+    meetingAt: selectedSlot?.start || null,
     moreTimesRequested: Boolean(row.more_times_requested),
   };
 }
