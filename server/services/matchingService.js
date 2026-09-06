@@ -19,6 +19,24 @@ async function createMatching(menteeId, mentorId) {
   return result.rows[0];
 }
 
+/**
+ * Returns true if a user with the given id exists.
+ *
+ * @param {number} userId
+ * @returns {Promise<boolean>}
+ */
+async function userExists(userId) {
+  const result = await pool.query(
+    `SELECT 1
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [userId]
+  );
+
+  return result.rowCount > 0;
+}
+
 const ACTIVE_STATUSES = ["PENDING_MENTOR", "PENDING_MENTEE", "MATCHED"];
 
 /**
@@ -123,6 +141,7 @@ async function requestMoreTimes(matchingId, menteeId) {
 
 module.exports = {
   createMatching,
+  userExists,
   findActiveMatching,
   getMatchingsByMentee,
   getMatchingByIdForMentee,
