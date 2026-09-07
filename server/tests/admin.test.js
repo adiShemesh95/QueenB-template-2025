@@ -360,3 +360,370 @@ describe("GET /api/admin/users/:id", () => {
     expect(res.body.error.code).toBe("UNAUTHORIZED");
   });
 });
+
+function assertAdminMatchingReport(matching) {
+  expect(matching).toEqual(
+    expect.objectContaining({
+      id: expect.any(Number),
+      status: expect.any(String),
+      createdAt: expect.anything(),
+      updatedAt: expect.anything(),
+      mentor: expect.objectContaining({
+        id: expect.any(Number),
+        username: expect.any(String),
+        email: expect.any(String),
+      }),
+      mentee: expect.objectContaining({
+        id: expect.any(Number),
+        username: expect.any(String),
+        email: expect.any(String),
+      }),
+    })
+  );
+  expect(matching).toHaveProperty("selectedSlot");
+  expect(matching.mentor).not.toHaveProperty("password_hash");
+  expect(matching.mentor).not.toHaveProperty("passwordHash");
+  expect(matching.mentor).not.toHaveProperty("password");
+  expect(matching.mentee).not.toHaveProperty("password_hash");
+  expect(matching.mentee).not.toHaveProperty("passwordHash");
+  expect(matching.mentee).not.toHaveProperty("password");
+}
+
+async function createMentorProfile(cookie, overrides = {}) {
+  const res = await request(app)
+    .post("/api/mentor-profile")
+    .set("Cookie", cookie)
+    .send({
+      job: "Engineer",
+      company: "Admin Matchings Co",
+      topics: ["Career Planning"],
+      ...overrides,
+    });
+  expect(res.status).toBe(200);
+  return res.body;
+}
+
+async function createMatching(menteeCookie, mentorId) {
+  const res = await request(app)
+    .post("/api/matching")
+    .set("Cookie", menteeCookie)
+    .send({ mentorId });
+  expect(res.status).toBe(201);
+  return res.body;
+}
+
+async function insertMatchingSlot(matchingId, start, end, isSelected = false) {
+  const result = await pool.query(
+    `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [matchingId, start, end, isSelected]
+  );
+  return result.rows[0];
+}
+
+describe("GET /api/admin/matchings — authorization", () => {
+  test("unauthenticated request is rejected with 401", async () => {
+    const res = await request(app).get("/api/admin/matchings");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  test("authenticated non-admin is rejected with 403", async () => {
+    const { cookie } = await registerUser();
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("FORBIDDEN");
+  });
+
+  test("authenticated Admin request is allowed", async () => {
+    const { cookie } = await registerAdmin();
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.matchings)).toBe(true);
+  });
+});
+
+describe("GET /api/admin/matchings — report data", () => {
+  test("Admin receives real matching rows with safe mentor/mentee fields", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const created = await createMatching(mentee.cookie, mentor.user.id);
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.matchings)).toBe(true);
+    expect(JSON.stringify(res.body)).not.toMatch(/password_hash/i);
+    expect(JSON.stringify(res.body)).not.toMatch(/"password"/i);
+
+    const reported = res.body.matchings.find((m) => m.id === created.id);
+    expect(reported).toBeTruthy();
+    assertAdminMatchingReport(reported);
+    expect(reported.status).toBe("PENDING_MENTOR");
+    expect(reported.status).toBe(created.status);
+    expect(reported.mentor).toEqual({
+      id: mentor.user.id,
+      username: mentor.user.username,
+      email: mentor.user.email,
+    });
+    expect(reported.mentee).toEqual({
+      id: mentee.user.id,
+      username: mentee.user.username,
+      email: mentee.user.email,
+    });
+    expect(reported.selectedSlot).toBeNull();
+  });
+
+  test("selectedSlot is null when matching has no selected slot", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const created = await createMatching(mentee.cookie, mentor.user.id);
+
+    // Slots may exist without a selection — selected_slot_id stays null.
+    await insertMatchingSlot(
+      created.id,
+      new Date("2026-07-01T10:00:00.000Z"),
+      new Date("2026-07-01T10:30:00.000Z")
+    );
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    const reported = res.body.matchings.find((m) => m.id === created.id);
+    expect(reported).toBeTruthy();
+    expect(reported.selectedSlot).toBeNull();
+  });
+});
+
+describe("GET /api/admin/matchings — filters", () => {
+  test("status filter returns only rows of the requested status", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const menteeA = await registerUser();
+    const menteeB = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const pending = await createMatching(menteeA.cookie, mentor.user.id);
+    const toReject = await createMatching(menteeB.cookie, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching SET status = 'REJECTED' WHERE id = $1`,
+      [toReject.id]
+    );
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ status: "PENDING_MENTOR" })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.matchings.every((m) => m.status === "PENDING_MENTOR")).toBe(
+      true
+    );
+    expect(res.body.matchings.some((m) => m.id === pending.id)).toBe(true);
+    expect(res.body.matchings.some((m) => m.id === toReject.id)).toBe(false);
+  });
+
+  test("invalid status returns 400", async () => {
+    const admin = await registerAdmin();
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ status: "ATTENDANCE_CONFIRMED" })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  test("participantId filter returns matchings where user is mentor or mentee", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+    const otherMentor = await registerUser();
+    const otherMentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    await createMentorProfile(otherMentor.cookie, {
+      job: "Lead",
+      company: "Other Co",
+    });
+
+    const asMentor = await createMatching(mentee.cookie, mentor.user.id);
+    const asMentee = await createMatching(mentor.cookie, otherMentor.user.id);
+    const unrelated = await createMatching(
+      otherMentee.cookie,
+      otherMentor.user.id
+    );
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ participantId: mentor.user.id })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    const ids = res.body.matchings.map((m) => m.id);
+    expect(ids).toContain(asMentor.id);
+    expect(ids).toContain(asMentee.id);
+    expect(ids).not.toContain(unrelated.id);
+
+    for (const matching of res.body.matchings) {
+      expect(
+        matching.mentor.id === mentor.user.id ||
+          matching.mentee.id === mentor.user.id
+      ).toBe(true);
+    }
+  });
+
+  test("invalid participantId returns 400", async () => {
+    const admin = await registerAdmin();
+    const cases = ["abc", "0", "-3", "1.5"];
+
+    for (const participantId of cases) {
+      const res = await request(app)
+        .get("/api/admin/matchings")
+        .query({ participantId })
+        .set("Cookie", admin.cookie);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  test("combined status + participantId filters apply both conditions", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const menteeA = await registerUser();
+    const menteeB = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const pending = await createMatching(menteeA.cookie, mentor.user.id);
+    const matched = await createMatching(menteeB.cookie, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching SET status = 'MATCHED' WHERE id = $1`,
+      [matched.id]
+    );
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ status: "MATCHED", participantId: mentor.user.id })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.matchings.every((m) => m.status === "MATCHED")).toBe(true);
+    expect(res.body.matchings.some((m) => m.id === matched.id)).toBe(true);
+    expect(res.body.matchings.some((m) => m.id === pending.id)).toBe(false);
+  });
+
+  test("valid filters with no results return empty matchings array", async () => {
+    const admin = await registerAdmin();
+    const missingParticipantId = 2_147_483_647;
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({
+        status: "MATCHED",
+        participantId: missingParticipantId,
+      })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ matchings: [] });
+  });
+});
+
+describe("GET /api/admin/matchings — selected slot", () => {
+  test("returns authoritative selectedSlot without duplicating matching rows", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const matching = await createMatching(mentee.cookie, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching SET status = 'PENDING_MENTEE' WHERE id = $1`,
+      [matching.id]
+    );
+
+    const slotA = await insertMatchingSlot(
+      matching.id,
+      new Date("2026-08-01T10:00:00.000Z"),
+      new Date("2026-08-01T10:30:00.000Z")
+    );
+    const slotB = await insertMatchingSlot(
+      matching.id,
+      new Date("2026-08-01T11:00:00.000Z"),
+      new Date("2026-08-01T11:30:00.000Z")
+    );
+    const slotC = await insertMatchingSlot(
+      matching.id,
+      new Date("2026-08-01T12:00:00.000Z"),
+      new Date("2026-08-01T12:30:00.000Z")
+    );
+
+    const selectRes = await request(app)
+      .post(`/api/matching/${matching.id}/select-slot`)
+      .set("Cookie", mentee.cookie)
+      .send({ slotId: slotB.id });
+    expect(selectRes.status).toBe(200);
+    expect(selectRes.body.selected_slot_id).toBe(slotB.id);
+    expect(selectRes.body.status).toBe("MATCHED");
+
+    const slotCount = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM matching_slots WHERE matching_id = $1`,
+      [matching.id]
+    );
+    expect(slotCount.rows[0].count).toBe(3);
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ participantId: mentee.user.id })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+
+    const rowsForMatching = res.body.matchings.filter(
+      (m) => m.id === matching.id
+    );
+    expect(rowsForMatching).toHaveLength(1);
+
+    const reported = rowsForMatching[0];
+    assertAdminMatchingReport(reported);
+    expect(reported.status).toBe("MATCHED");
+    expect(reported.selectedSlot).toEqual(
+      expect.objectContaining({
+        id: slotB.id,
+      })
+    );
+    expect(new Date(reported.selectedSlot.start).toISOString()).toBe(
+      new Date(slotB.start_time).toISOString()
+    );
+    expect(new Date(reported.selectedSlot.end).toISOString()).toBe(
+      new Date(slotB.end_time).toISOString()
+    );
+    expect(reported.selectedSlot.id).not.toBe(slotA.id);
+    expect(reported.selectedSlot.id).not.toBe(slotC.id);
+  });
+});

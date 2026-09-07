@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const {
+  MATCHING_REPORT_STATUSES,
   listUsersForAdmin,
   getUserForAdmin,
+  listMatchingsForAdmin,
 } = require("../services/adminService");
 const {
   buildError,
@@ -17,6 +19,54 @@ router.get("/users", async (req, res) => {
     return res.status(200).json({ users });
   } catch (err) {
     console.error("GET /api/admin/users failed:", err.message);
+    return res.status(500).json(internalError());
+  }
+});
+
+// GET /api/admin/matchings — report of current matching records (not "completed meetings").
+// Auth/Admin checks are not repeated here: app.js already runs authMiddleware then
+// adminMiddleware for the entire /api/admin router.
+router.get("/matchings", async (req, res) => {
+  try {
+    const filters = {};
+
+    // Only accept statuses that exist in production matching today.
+    // Do not accept future attendance/completion/feedback values here.
+    if (req.query.status !== undefined) {
+      const status = String(req.query.status);
+      if (!MATCHING_REPORT_STATUSES.includes(status)) {
+        return res.status(400).json(
+          validationError("Invalid matching status.", [
+            {
+              field: "status",
+              message: `Must be one of: ${MATCHING_REPORT_STATUSES.join(", ")}.`,
+            },
+          ])
+        );
+      }
+      filters.status = status;
+    }
+
+    // participantId = either side of the match (mentor OR mentee).
+    if (req.query.participantId !== undefined) {
+      const participantId = Number(req.query.participantId);
+      if (!Number.isInteger(participantId) || participantId <= 0) {
+        return res.status(400).json(
+          validationError("Valid participantId is required.", [
+            {
+              field: "participantId",
+              message: "Must be a positive integer.",
+            },
+          ])
+        );
+      }
+      filters.participantId = participantId;
+    }
+
+    const matchings = await listMatchingsForAdmin(filters);
+    return res.status(200).json({ matchings });
+  } catch (err) {
+    console.error("GET /api/admin/matchings failed:", err.message);
     return res.status(500).json(internalError());
   }
 });
