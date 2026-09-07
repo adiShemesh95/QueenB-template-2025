@@ -4,11 +4,13 @@ import {
   Box,
   Button,
   CircularProgress,
+  IconButton,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MentorLayout from "./MentorLayout";
 import StatusChip from "../matching/StatusChip";
 import { REQUEST_STATUS } from "../matching/constants";
@@ -99,6 +101,10 @@ function MentorRequestCard({
         i === index ? { ...slot, startLocal: value } : slot
       )
     );
+  };
+
+  const removeSlotDraft = (index) => {
+    setSlotDrafts((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addSlotRow = () => {
@@ -262,29 +268,51 @@ function MentorRequestCard({
               return (
                 <Stack
                   key={`slot-draft-${index}`}
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1.25}
+                  direction="row"
+                  spacing={1}
+                  alignItems={{ xs: "flex-start", sm: "center" }}
                 >
-                  <TextField
-                    label={`Start ${index + 1}`}
-                    type="datetime-local"
-                    value={draft.startLocal}
-                    onChange={(e) => updateStart(index, e.target.value)}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.25}
+                    sx={{ flex: 1, minWidth: 0 }}
+                  >
+                    <TextField
+                      label={`Start ${index + 1}`}
+                      type="datetime-local"
+                      value={draft.startLocal}
+                      onChange={(e) => updateStart(index, e.target.value)}
+                      disabled={busy}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      size="small"
+                    />
+                    <TextField
+                      label={`End ${index + 1}`}
+                      type="datetime-local"
+                      value={endLocal}
+                      InputProps={{ readOnly: true }}
+                      disabled={busy}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      size="small"
+                    />
+                  </Stack>
+                  <IconButton
+                    aria-label={`Remove draft slot ${index + 1}`}
+                    onClick={() => removeSlotDraft(index)}
                     disabled={busy}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
                     size="small"
-                  />
-                  <TextField
-                    label={`End ${index + 1}`}
-                    type="datetime-local"
-                    value={endLocal}
-                    InputProps={{ readOnly: true }}
-                    disabled={busy}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    size="small"
-                  />
+                    sx={{
+                      color: "#F75F8A",
+                      mt: { xs: 0.5, sm: 0 },
+                      "&:hover": {
+                        backgroundColor: "rgba(247, 95, 138, 0.1)",
+                      },
+                    }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
                 </Stack>
               );
             })}
