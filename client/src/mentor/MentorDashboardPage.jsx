@@ -22,6 +22,7 @@ import {
   getMyMentorProfile,
   proposeSlots,
   rejectMentorRequest,
+  requestReschedule,
 } from "./mentorService";
 import { useMentorLanguage } from "./translations";
 
@@ -149,6 +150,7 @@ function MentorRequestCard({
   request,
   onReject,
   onProposeSlots,
+  onRequestReschedule,
   actionLoadingId,
   sessionDurationMinutes,
 }) {
@@ -164,6 +166,8 @@ function MentorRequestCard({
   const canReject =
     request.status === REQUEST_STATUS.PENDING_MENTOR ||
     request.status === REQUEST_STATUS.PENDING_MENTEE;
+  const canReschedule =
+    request.status === REQUEST_STATUS.MATCHED && !request.rescheduleUsed;
 
   const updateStart = (index, value) => {
     setSlotDrafts((prev) =>
@@ -435,6 +439,30 @@ function MentorRequestCard({
           )}
         </Typography>
       )}
+
+      {canReschedule && (
+        <Button
+          variant="outlined"
+          disabled={busy}
+          onClick={() => onRequestReschedule(request.id)}
+          sx={{
+            mt: 1.5,
+            px: 2.5,
+            py: 1.1,
+            borderRadius: 3,
+            borderWidth: 1.5,
+            borderColor: "#F75F8A",
+            color: "#F75F8A",
+            "&:hover": {
+              borderWidth: 1.5,
+              borderColor: "#E04872",
+              backgroundColor: "rgba(247, 95, 138, 0.06)",
+            },
+          }}
+        >
+          {t.requestReschedule}
+        </Button>
+      )}
     </Box>
   );
 }
@@ -524,6 +552,25 @@ function MentorDashboardPage() {
     } catch (err) {
       const message =
         err?.response?.data?.error?.message || t.slotsSendError;
+      setFeedback({ severity: "error", message });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRequestReschedule = async (requestId) => {
+    try {
+      setActionLoadingId(requestId);
+      setFeedback(null);
+      await requestReschedule(requestId);
+      await loadRequests();
+      setFeedback({
+        severity: "success",
+        message: t.rescheduleSuccess,
+      });
+    } catch (err) {
+      const message =
+        err?.response?.data?.error?.message || t.rescheduleError;
       setFeedback({ severity: "error", message });
     } finally {
       setActionLoadingId(null);
@@ -646,6 +693,7 @@ function MentorDashboardPage() {
                   sessionDurationMinutes={sessionDurationMinutes}
                   onReject={handleReject}
                   onProposeSlots={handleProposeSlots}
+                  onRequestReschedule={handleRequestReschedule}
                 />
               ))}
             </Stack>

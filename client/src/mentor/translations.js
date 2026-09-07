@@ -104,6 +104,9 @@ const translations = {
     rejectError: "Unable to reject this request.",
     slotsSentSuccess: "Time slots sent to the mentee.",
     slotsSendError: "Unable to send time slots. Please try again.",
+    requestReschedule: "Request reschedule",
+    rescheduleSuccess: "Reschedule started. Propose new times below.",
+    rescheduleError: "Unable to request a reschedule.",
   },
   he: {
     home: "דף הבית",
@@ -198,6 +201,9 @@ const translations = {
     rejectError: "לא ניתן לדחות את הבקשה.",
     slotsSentSuccess: "המועדים נשלחו למנטית.",
     slotsSendError: "לא ניתן לשלוח מועדים. נסי שוב.",
+    requestReschedule: "בקשת שינוי מועד",
+    rescheduleSuccess: "שינוי המועד התחיל. הציעי מועדים חדשים למטה.",
+    rescheduleError: "לא ניתן לבקש שינוי מועד.",
   },
 };
 

@@ -72,6 +72,10 @@ const translations = {
     cancelRequest: "Cancel request",
     cancelSuccess: "This mentoring request was cancelled.",
     cancelError: "Could not cancel this request.",
+    requestReschedule: "Request reschedule",
+    rescheduleSuccess:
+      "Reschedule requested. Your mentor will propose new times.",
+    rescheduleError: "Could not request a reschedule.",
   },
   he: {
     languageAria: "בחירת שפה",
@@ -139,6 +143,9 @@ const translations = {
     cancelRequest: "ביטול הבקשה",
     cancelSuccess: "בקשת המנטורינג בוטלה.",
     cancelError: "לא ניתן לבטל את הבקשה.",
+    requestReschedule: "בקשת שינוי מועד",
+    rescheduleSuccess: "בקשת שינוי המועד נשלחה. המנטורית תציע מועדים חדשים.",
+    rescheduleError: "לא ניתן לבקש שינוי מועד.",
   },
 };
 

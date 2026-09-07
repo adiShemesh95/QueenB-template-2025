@@ -73,6 +73,14 @@ export async function rejectMentorRequest(requestId) {
   return response.data;
 }
 
+/** POST /api/mentor-requests/:id/request-reschedule */
+export async function requestReschedule(requestId) {
+  const response = await mentorClient.post(
+    `/api/mentor-requests/${requestId}/request-reschedule`
+  );
+  return response.data;
+}
+
 /** POST /api/matching — mentee requests this mentor (mentorId = users.id) */
 export async function requestMentorship(mentorUserId) {
   const response = await mentorClient.post("/api/matching", {

@@ -19,6 +19,7 @@ import {
   cancelMatchingRequest,
   getRequestById,
   requestMoreTimes,
+  requestReschedule,
   selectTimeSlot,
 } from "./matchingService";
 import { REQUEST_STATUS } from "./constants";
@@ -197,6 +198,21 @@ function RequestDetailsPage() {
       setFeedbackKey({ severity: "info", key: "cancelSuccess" });
     } catch (err) {
       setFeedbackKey({ severity: "error", key: "cancelError" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRequestReschedule = async () => {
+    if (!request) return;
+    try {
+      setActionLoading(true);
+      setFeedbackKey(null);
+      const updated = await requestReschedule(request.id);
+      setRequest(updated);
+      setFeedbackKey({ severity: "info", key: "rescheduleSuccess" });
+    } catch (err) {
+      setFeedbackKey({ severity: "error", key: "rescheduleError" });
     } finally {
       setActionLoading(false);
     }
@@ -474,6 +490,29 @@ function RequestDetailsPage() {
                 {formatDateTime(request.meetingAt, language)}
               </Typography>
             </Box>
+            {!request.rescheduleUsed && (
+              <Button
+                variant="outlined"
+                disabled={actionLoading}
+                onClick={handleRequestReschedule}
+                sx={{
+                  mt: 2,
+                  px: 2.5,
+                  py: 1.15,
+                  borderRadius: 3,
+                  borderWidth: 1.5,
+                  borderColor: "#F75F8A",
+                  color: "#F75F8A",
+                  "&:hover": {
+                    borderWidth: 1.5,
+                    borderColor: "#E04872",
+                    backgroundColor: "rgba(247, 95, 138, 0.06)",
+                  },
+                }}
+              >
+                {t.requestReschedule}
+              </Button>
+            )}
           </>
         )}
 
