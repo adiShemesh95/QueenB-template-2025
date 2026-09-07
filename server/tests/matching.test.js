@@ -40,6 +40,21 @@ async function registerAuthenticatedUser() {
   };
 }
 
+async function registerActiveMentor() {
+  const mentor = await registerAuthenticatedUser();
+  const profileRes = await request(app)
+    .post("/api/mentor-profile")
+    .set("Cookie", mentor.cookie)
+    .send({
+      job: "Software Engineer",
+      company: "Test Co",
+      topics: ["career"],
+    });
+  expect(profileRes.status).toBe(200);
+  expect(profileRes.body.isActive).toBe(true);
+  return mentor;
+}
+
 beforeAll(() => {
   require("dotenv").config();
   if (!process.env.JWT_SECRET) {
@@ -124,12 +139,25 @@ describe("POST /api/matching", () => {
       .send({ mentorId: missingMentorId });
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe("Mentor not found");
+    expect(res.body.error).toBe("Active mentor profile not found");
+  });
+
+  test("returns 404 when target user has no mentor profile", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const userWithoutProfile = await registerAuthenticatedUser();
+
+    const res = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId: userWithoutProfile.user.id });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Active mentor profile not found");
   });
 
   test("returns 201 and creates matching for authenticated mentee", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const res = await request(app)
       .post("/api/matching")
@@ -149,7 +177,7 @@ describe("POST /api/matching", () => {
 
   test("ignores menteeId in the request body", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
     const other = await registerAuthenticatedUser();
 
     const res = await request(app)
@@ -168,7 +196,7 @@ describe("POST /api/matching", () => {
 
   test("returns 409 when an active matching already exists", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const first = await request(app)
       .post("/api/matching")
@@ -189,7 +217,7 @@ describe("POST /api/matching", () => {
 
   test("returns 409 when an existing matching is PENDING_MENTEE", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const first = await request(app)
       .post("/api/matching")
@@ -217,7 +245,7 @@ describe("POST /api/matching", () => {
 
   test("returns 409 when an existing matching is MATCHED", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const first = await request(app)
       .post("/api/matching")
@@ -245,7 +273,7 @@ describe("POST /api/matching", () => {
 
   test("allows a new request when the previous matching is REJECTED", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const first = await request(app)
       .post("/api/matching")
@@ -300,8 +328,8 @@ describe("GET /api/matching", () => {
   test("returns only the authenticated mentee's rows", async () => {
     const mentee = await registerAuthenticatedUser();
     const otherMentee = await registerAuthenticatedUser();
-    const mentorA = await registerAuthenticatedUser();
-    const mentorB = await registerAuthenticatedUser();
+    const mentorA = await registerActiveMentor();
+    const mentorB = await registerActiveMentor();
 
     const own = await request(app)
       .post("/api/matching")
@@ -335,9 +363,9 @@ describe("GET /api/matching", () => {
 
   test("returns rows ordered by created_at DESC", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentorOldest = await registerAuthenticatedUser();
-    const mentorMiddle = await registerAuthenticatedUser();
-    const mentorNewest = await registerAuthenticatedUser();
+    const mentorOldest = await registerActiveMentor();
+    const mentorMiddle = await registerActiveMentor();
+    const mentorNewest = await registerActiveMentor();
 
     const oldest = await request(app)
       .post("/api/matching")
@@ -407,7 +435,7 @@ describe("GET /api/matching/:id", () => {
 
   test("returns 200 when the matching belongs to the authenticated mentee", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const created = await request(app)
       .post("/api/matching")
@@ -445,7 +473,7 @@ describe("GET /api/matching/:id", () => {
   test("returns 404 when the matching belongs to another mentee", async () => {
     const owner = await registerAuthenticatedUser();
     const otherMentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
 
     const created = await request(app)
       .post("/api/matching")
@@ -508,7 +536,7 @@ describe("POST /api/matching/:id/request-more-times", () => {
   test("returns 404 when the matching belongs to another mentee", async () => {
     const owner = await registerAuthenticatedUser();
     const otherMentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
     const matching = await createMatchingFor(owner, mentor.user.id);
 
     await pool.query(
@@ -529,7 +557,7 @@ describe("POST /api/matching/:id/request-more-times", () => {
 
   test("returns 400 when status is not PENDING_MENTEE", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
     const matching = await createMatchingFor(mentee, mentor.user.id);
 
     expect(matching.status).toBe("PENDING_MENTOR");
@@ -546,7 +574,7 @@ describe("POST /api/matching/:id/request-more-times", () => {
 
   test("returns 409 when more_times_requested is already true", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
     const matching = await createMatchingFor(mentee, mentor.user.id);
 
     await pool.query(
@@ -569,7 +597,7 @@ describe("POST /api/matching/:id/request-more-times", () => {
 
   test("returns 200 and updates matching when status is PENDING_MENTEE", async () => {
     const mentee = await registerAuthenticatedUser();
-    const mentor = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
     const matching = await createMatchingFor(mentee, mentor.user.id);
 
     await pool.query(

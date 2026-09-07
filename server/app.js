@@ -29,6 +29,17 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api/mentors", require("./routes/mentors"));
+app.use(
+  "/api/mentor-profile",
+  authMiddleware,
+  require("./routes/mentorProfile")
+);
+app.use(
+  "/api/mentor-requests",
+  authMiddleware,
+  require("./routes/mentorRequests")
+);
 app.use(
   "/api/matching",
   authMiddleware,

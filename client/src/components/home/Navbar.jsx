@@ -83,6 +83,18 @@ function Navbar({ language, onLanguageChange, t }) {
               Dashboard
             </Button>
             <Button
+              component={RouterLink}
+              to="/mentors"
+              size="small"
+              sx={{
+                color: "#07142D",
+                fontWeight: 600,
+                textTransform: "none",
+              }}
+            >
+              Mentors
+            </Button>
+            <Button
               onClick={handleLogout}
               disabled={loggingOut}
               size="small"
