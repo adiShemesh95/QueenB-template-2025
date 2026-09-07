@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 
+// bcrypt stores a salted hash so plaintext passwords are never saved.
 const SALT_ROUNDS = 10;
 
 async function hashPassword(password) {

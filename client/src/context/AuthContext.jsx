@@ -24,7 +24,9 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // On load, restore session from the cookie via GET /api/users/me.
   useEffect(() => {
+    // Ignore late responses if this provider unmounts during the request.
     let cancelled = false;
 
     (async () => {
@@ -49,6 +51,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Register/login set the httpOnly cookie on the server; keep client user state in sync.
   const register = async (payload) => {
     const data = await registerUser(payload);
     setUser(data.user);

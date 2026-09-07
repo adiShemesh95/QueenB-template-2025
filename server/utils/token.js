@@ -10,6 +10,7 @@ function getJwtSecret() {
   return secret;
 }
 
+// Signs a short-lived session JWT; the value is stored in an httpOnly cookie.
 function signToken(userId) {
   return jwt.sign({ userId }, getJwtSecret(), { expiresIn: TOKEN_EXPIRES_IN });
 }

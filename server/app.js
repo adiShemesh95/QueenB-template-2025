@@ -11,10 +11,10 @@ const { internalError, validationError } = require("./utils/errors");
 
 const app = express();
 
-// Middleware
 app.use(helmet());
 app.use(
   cors({
+    // Allow the React client to send/receive the auth cookie cross-origin in local/dev.
     origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
     credentials: true,
   })
@@ -26,7 +26,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/mentors", require("./routes/mentors"));
@@ -46,7 +45,6 @@ app.use(
   require("./routes/matching")
 );
 
-// Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({
     message: "QueenB Server is running!",
@@ -55,12 +53,11 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Root endpoint
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to QueenB API" });
 });
 
-// Error handling middleware (includes malformed JSON from express.json)
+// Map express.json SyntaxErrors to the same VALIDATION_ERROR shape as auth input errors.
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
     return res
@@ -72,7 +69,6 @@ app.use((err, req, res, next) => {
   return res.status(500).json(internalError());
 });
 
-// 404 handler
 app.use("*", (req, res) => {
   res.status(404).json({
     error: {

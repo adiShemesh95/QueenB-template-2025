@@ -21,6 +21,7 @@ function AuthLoadingState({ label = "Loading..." }) {
   );
 }
 
+// Blocks unauthenticated users from private pages (e.g. dashboard).
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -35,6 +36,7 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Keeps logged-in users off guest-only pages (home, sign up, sign in).
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
 

@@ -8,6 +8,8 @@ const {
   usernameTakenError,
 } = require("../utils/errors");
 
+// Auth business logic: validate input, hash passwords, issue JWTs (routes set cookies).
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -149,6 +151,7 @@ function validateLoginInput(body) {
   return { email, password };
 }
 
+// Parameterized queries ($1, …) keep user input out of the SQL string.
 async function findUserByEmail(email) {
   const result = await pool.query(
     `SELECT id, email, username, password_hash, created_at
@@ -196,6 +199,7 @@ async function register(body) {
       [email, username, passwordHash]
     );
   } catch (err) {
+    // 23505: unique violation if two requests pass the pre-checks at once.
     if (err.code === "23505") {
       if (err.constraint === "users_email_unique" || /email/i.test(err.detail || "")) {
         return { status: 409, body: emailTakenError() };
@@ -224,6 +228,7 @@ async function login(body) {
   }
 
   const { email, password } = validated;
+  // Same response for unknown email and wrong password (no user enumeration).
   const credentialsError = {
     status: 401,
     body: invalidCredentialsError(),

@@ -200,6 +200,7 @@ describe("POST /api/auth/login", () => {
     assertSafeUser(res.body.user);
   });
 
+  // Confirms login does not reveal whether the email exists.
   test("wrong password and unknown email return identical INVALID_CREDENTIALS", async () => {
     const payload = makeUser();
     await request(app).post("/api/auth/register").send(payload);

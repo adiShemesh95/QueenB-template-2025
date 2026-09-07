@@ -4,13 +4,12 @@ const { getAllUsers } = require("../services/usersService");
 const authMiddleware = require("../middleware/authMiddleware");
 const { internalError } = require("../utils/errors");
 
-// GET /api/users - Get all users
 router.get("/", (req, res) => {
   const users = getAllUsers();
   res.json(users);
 });
 
-// GET /api/users/me - Current authenticated user
+// Session identity for the client: requires a valid auth cookie.
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     return res.status(200).json({ user: req.user });

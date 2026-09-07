@@ -1,5 +1,6 @@
 import axios from "axios";
 
+// Cookie-based auth: send/receive the httpOnly session cookie on every request.
 const authClient = axios.create({
   withCredentials: true,
 });
