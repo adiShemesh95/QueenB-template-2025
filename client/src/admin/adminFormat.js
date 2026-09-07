@@ -23,6 +23,13 @@ const timeFormatter = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
+const longDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
 function toValidDate(value) {
   if (value == null || value === "") return null;
   const date = new Date(value);
@@ -50,4 +57,38 @@ export function formatAdminTimeRange(start, end) {
   const endDate = toValidDate(end);
   if (!endDate) return `${datePart} · ${startTime}`;
   return `${datePart} · ${startTime} – ${timeFormatter.format(endDate)}`;
+}
+
+/** Long weekday date for Meeting Details, e.g. "Wednesday, 2 September 2026". */
+export function formatAdminLongDate(value) {
+  const date = toValidDate(value);
+  if (!date) return "—";
+  return longDateFormatter.format(date);
+}
+
+/** Clock range only, e.g. "10:00 – 11:00" (no date part). */
+export function formatAdminClockRange(start, end) {
+  const startDate = toValidDate(start);
+  if (!startDate) return "—";
+  const startTime = timeFormatter.format(startDate);
+  const endDate = toValidDate(end);
+  if (!endDate) return startTime;
+  return `${startTime} – ${timeFormatter.format(endDate)}`;
+}
+
+/**
+ * Human duration from start/end when both are valid.
+ * Returns null when duration cannot be calculated safely.
+ */
+export function formatAdminDuration(start, end) {
+  const startDate = toValidDate(start);
+  const endDate = toValidDate(end);
+  if (!startDate || !endDate) return null;
+  const minutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (rem === 0) return hours === 1 ? "1 hour" : `${hours} hours`;
+  return `${hours}h ${rem}m`;
 }

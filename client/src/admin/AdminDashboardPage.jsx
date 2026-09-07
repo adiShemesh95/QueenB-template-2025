@@ -3,6 +3,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import HubRoundedIcon from "@mui/icons-material/HubRounded";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 
 const glassCardSx = {
@@ -117,14 +118,15 @@ function AdminDashboardPage() {
           lineHeight: 1.55,
         }}
       >
-        Review registered users and matching records. Calendar and alerts are
-        not part of this stage.
+        Review users, matching records, and scheduled meeting times. Admin
+        Alerts are not part of this stage.
       </Typography>
 
       <Box
         sx={{
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
+          flexWrap: "wrap",
           gap: 2.5,
         }}
       >
@@ -141,6 +143,13 @@ function AdminDashboardPage() {
           title="Matchings"
           description="View the matching report and open individual matching details."
           cta="View matchings"
+        />
+        <NavCard
+          to="/admin/calendar"
+          icon={<CalendarMonthOutlinedIcon />}
+          title="Calendar"
+          description="See scheduled matching meetings on a month calendar by status."
+          cta="View calendar"
         />
       </Box>
     </Box>

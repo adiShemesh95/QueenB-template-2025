@@ -6,6 +6,7 @@ import {
 import {
   ADMIN_MATCHING_STATUSES,
   getAdminStatusLabel,
+  toAdminCalendarEvents,
 } from "./adminConstants";
 
 describe("adminFormat", () => {
@@ -33,5 +34,39 @@ describe("adminConstants", () => {
     );
     expect(getAdminStatusLabel("MATCHED")).toBe("Matched");
     expect(getAdminStatusLabel("REJECTED")).toBe("Rejected");
+  });
+
+  test("toAdminCalendarEvents skips matchings without selectedSlot", () => {
+    const events = toAdminCalendarEvents([
+      {
+        id: 1,
+        status: "PENDING_MENTOR",
+        mentor: { username: "a" },
+        mentee: { username: "b" },
+        selectedSlot: null,
+      },
+      {
+        id: 2,
+        status: "MATCHED",
+        mentor: { username: "c" },
+        mentee: { username: "d" },
+        selectedSlot: {
+          id: 9,
+          start: "2026-03-01T14:00:00.000Z",
+          end: "2026-03-01T15:00:00.000Z",
+        },
+      },
+    ]);
+    expect(events).toEqual([
+      {
+        id: 2,
+        status: "MATCHED",
+        title: "c ↔ d",
+        start: "2026-03-01T14:00:00.000Z",
+        end: "2026-03-01T15:00:00.000Z",
+        mentor: { username: "c" },
+        mentee: { username: "d" },
+      },
+    ]);
   });
 });

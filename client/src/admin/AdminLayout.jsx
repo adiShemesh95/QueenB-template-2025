@@ -21,10 +21,10 @@ const navItems = [
   { to: "/admin", label: "Overview", end: true },
   { to: "/admin/users", label: "Users" },
   { to: "/admin/matchings", label: "Matchings" },
+  { to: "/admin/calendar", label: "Calendar" },
 ];
 
-// Calendar and Admin Alerts are intentionally omitted from Stage 5 —
-// Calendar is a later stage; Alerts are owned by another teammate.
+// Admin Alerts are intentionally omitted — owned by another teammate.
 
 // NavLink applies the "active" class; MUI sx targets it for highlight styles.
 const navButtonSx = {

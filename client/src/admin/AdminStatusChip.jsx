@@ -1,12 +1,9 @@
 import React from "react";
 import { Chip } from "@mui/material";
-import {
-  ADMIN_STATUS_COLORS,
-  getAdminStatusLabel,
-} from "./adminConstants";
+import { getAdminStatusColors, getAdminStatusLabel } from "./adminConstants";
 
 function AdminStatusChip({ status }) {
-  const colors = ADMIN_STATUS_COLORS[status] || ADMIN_STATUS_COLORS.REJECTED;
+  const colors = getAdminStatusColors(status);
 
   return (
     <Chip
