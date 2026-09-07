@@ -7,13 +7,15 @@ import {
   IconButton,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MentorLayout from "./MentorLayout";
 import StatusChip from "../matching/StatusChip";
-import { REQUEST_STATUS } from "../matching/constants";
+import { FILTER_ALL, REQUEST_STATUS } from "../matching/constants";
 import { formatDate, formatTimeRange } from "../matching/utils";
 import {
   getMentorRequests,
@@ -23,6 +25,46 @@ import {
 } from "./mentorService";
 
 const DEFAULT_SESSION_DURATION_MINUTES = 60;
+
+const MENTOR_STATUS_FILTER_OPTIONS = [
+  { value: FILTER_ALL, label: "All" },
+  { value: REQUEST_STATUS.PENDING_MENTOR, label: "Waiting for mentor" },
+  { value: REQUEST_STATUS.PENDING_MENTEE, label: "Waiting for mentee" },
+  { value: REQUEST_STATUS.MATCHED, label: "Matched" },
+  { value: REQUEST_STATUS.REJECTED, label: "Rejected" },
+];
+
+const filterToggleGroupSx = {
+  display: "inline-flex",
+  flexWrap: "nowrap",
+  gap: 1,
+  "& .MuiToggleButtonGroup-grouped": {
+    border: "1.5px solid transparent",
+    borderRadius: "999px !important",
+    px: 1.75,
+    py: 0.6,
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.85rem",
+    color: "#4A5568",
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    whiteSpace: "nowrap",
+    "&:not(:first-of-type)": {
+      marginLeft: 0,
+    },
+    "&.Mui-selected": {
+      backgroundColor: "rgba(247, 95, 138, 0.12)",
+      color: "#D93F68",
+      borderColor: "#F75F8A",
+      "&:hover": {
+        backgroundColor: "rgba(247, 95, 138, 0.18)",
+      },
+    },
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.92)",
+    },
+  },
+};
 
 const glassCardSx = {
   p: { xs: 2, sm: 2.5 },
@@ -48,6 +90,32 @@ const primaryButtonSx = {
     color: "#FFFFFF",
   },
 };
+
+/** Non-MATCHED keep API order; MATCHED appended sorted by meeting time ascending. */
+function orderMentorInboxRequests(requests) {
+  const nonMatched = [];
+  const matched = [];
+
+  for (const request of requests) {
+    if (request.status === REQUEST_STATUS.MATCHED) {
+      matched.push(request);
+    } else {
+      nonMatched.push(request);
+    }
+  }
+
+  matched.sort((a, b) => {
+    const aTime = a.meetingAt
+      ? new Date(a.meetingAt).getTime()
+      : Number.POSITIVE_INFINITY;
+    const bTime = b.meetingAt
+      ? new Date(b.meetingAt).getTime()
+      : Number.POSITIVE_INFINITY;
+    return aTime - bTime;
+  });
+
+  return [...nonMatched, ...matched];
+}
 
 function emptySlotDraft() {
   return { startLocal: "" };
@@ -207,7 +275,8 @@ function MentorRequestCard({
         )}
       </Box>
 
-      {Array.isArray(request.suggestedSlots) &&
+      {request.status !== REQUEST_STATUS.MATCHED &&
+        Array.isArray(request.suggestedSlots) &&
         request.suggestedSlots.length > 0 && (
           <Box sx={{ mb: 2 }}>
             <Typography
@@ -364,6 +433,7 @@ function MentorRequestCard({
 
 function MentorDashboardPage() {
   const [requests, setRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState(
     DEFAULT_SESSION_DURATION_MINUTES
   );
@@ -453,6 +523,12 @@ function MentorDashboardPage() {
     }
   };
 
+  const filteredRequests =
+    statusFilter === FILTER_ALL
+      ? requests
+      : requests.filter((request) => request.status === statusFilter);
+  const visibleRequests = orderMentorInboxRequests(filteredRequests);
+
   return (
     <MentorLayout
       title="Mentor inbox"
@@ -508,18 +584,66 @@ function MentorDashboardPage() {
       )}
 
       {!loading && !error && requests.length > 0 && (
-        <Stack spacing={1.75}>
-          {requests.map((request) => (
-            <MentorRequestCard
-              key={request.id}
-              request={request}
-              actionLoadingId={actionLoadingId}
-              sessionDurationMinutes={sessionDurationMinutes}
-              onReject={handleReject}
-              onProposeSlots={handleProposeSlots}
-            />
-          ))}
-        </Stack>
+        <>
+          <Box
+            sx={{
+              mb: 2.5,
+              overflowX: "auto",
+              pb: 0.5,
+              mx: { xs: -0.5, sm: 0 },
+              px: { xs: 0.5, sm: 0 },
+            }}
+          >
+            <ToggleButtonGroup
+              exclusive
+              value={statusFilter}
+              onChange={(_event, next) => {
+                if (next !== null) setStatusFilter(next);
+              }}
+              aria-label="Filter mentor requests by status"
+              sx={filterToggleGroupSx}
+            >
+              {MENTOR_STATUS_FILTER_OPTIONS.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+
+          {visibleRequests.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: "center",
+                py: 6,
+                px: 2,
+                borderRadius: 4,
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                border: "1px dashed rgba(113, 128, 150, 0.35)",
+              }}
+            >
+              <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
+                No requests in this filter
+              </Typography>
+              <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
+                Try another status, or choose All.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={1.75}>
+              {visibleRequests.map((request) => (
+                <MentorRequestCard
+                  key={request.id}
+                  request={request}
+                  actionLoadingId={actionLoadingId}
+                  sessionDurationMinutes={sessionDurationMinutes}
+                  onReject={handleReject}
+                  onProposeSlots={handleProposeSlots}
+                />
+              ))}
+            </Stack>
+          )}
+        </>
       )}
     </MentorLayout>
   );
