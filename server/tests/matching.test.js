@@ -624,3 +624,223 @@ describe("POST /api/matching/:id/request-more-times", () => {
     );
   });
 });
+
+describe("POST /api/matching/:id/select-slot", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  async function insertSlot(matchingId, start, end, isSelected = false) {
+    const result = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [matchingId, start, end, isSelected]
+    );
+    return result.rows[0];
+  }
+
+  async function preparePendingMenteeWithSlots(mentee, mentorId, slotCount = 2) {
+    const matching = await createMatchingFor(mentee, mentorId);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE'
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const slots = [];
+    for (let i = 0; i < slotCount; i += 1) {
+      const start = new Date(`2026-06-01T1${i}:00:00.000Z`);
+      const end = new Date(`2026-06-01T1${i}:30:00.000Z`);
+      slots.push(await insertSlot(matching.id, start, end, i === 0));
+    }
+
+    return { matching, slots };
+  }
+
+  test("returns 401 without authentication", async () => {
+    const res = await request(app)
+      .post("/api/matching/1/select-slot")
+      .send({ slotId: 1 });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  test("returns 400 for invalid matching id", async () => {
+    const { cookie } = await registerAuthenticatedUser();
+    const cases = ["abc", "1.5", "0", "-3"];
+
+    for (const id of cases) {
+      const res = await request(app)
+        .post(`/api/matching/${id}/select-slot`)
+        .set("Cookie", cookie)
+        .send({ slotId: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Valid matching id is required");
+    }
+  });
+
+  test("returns 400 for invalid or missing slotId", async () => {
+    const { cookie } = await registerAuthenticatedUser();
+
+    const cases = [
+      {},
+      { slotId: null },
+      { slotId: "abc" },
+      { slotId: 1.5 },
+      { slotId: 0 },
+      { slotId: -3 },
+    ];
+
+    for (const body of cases) {
+      const res = await request(app)
+        .post("/api/matching/1/select-slot")
+        .set("Cookie", cookie)
+        .send(body);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Valid slotId is required");
+    }
+  });
+
+  test("returns 404 when the matching does not exist", async () => {
+    const { cookie } = await registerAuthenticatedUser();
+    const missingId = 2_147_483_647;
+
+    const res = await request(app)
+      .post(`/api/matching/${missingId}/select-slot`)
+      .set("Cookie", cookie)
+      .send({ slotId: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+
+  test("returns 404 when the matching belongs to another mentee", async () => {
+    const owner = await registerAuthenticatedUser();
+    const otherMentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching, slots } = await preparePendingMenteeWithSlots(
+      owner,
+      mentor.user.id
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/select-slot`)
+      .set("Cookie", otherMentee.cookie)
+      .send({ slotId: slots[1].id });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+
+  test("returns 400 when matching status is not PENDING_MENTEE", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+    const slot = await insertSlot(
+      matching.id,
+      new Date("2026-06-01T10:00:00.000Z"),
+      new Date("2026-06-01T10:30:00.000Z")
+    );
+
+    expect(matching.status).toBe("PENDING_MENTOR");
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/select-slot`)
+      .set("Cookie", mentee.cookie)
+      .send({ slotId: slot.id });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Slot selection is only available while status is PENDING_MENTEE"
+    );
+  });
+
+  test("returns 404 when the slot does not exist", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await preparePendingMenteeWithSlots(
+      mentee,
+      mentor.user.id
+    );
+    const missingSlotId = 2_147_483_647;
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/select-slot`)
+      .set("Cookie", mentee.cookie)
+      .send({ slotId: missingSlotId });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Slot not found for this matching");
+  });
+
+  test("returns 404 when the slot belongs to a different matching", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentorA = await registerActiveMentor();
+    const mentorB = await registerActiveMentor();
+
+    const own = await preparePendingMenteeWithSlots(mentee, mentorA.user.id);
+    const other = await preparePendingMenteeWithSlots(mentee, mentorB.user.id);
+
+    const res = await request(app)
+      .post(`/api/matching/${own.matching.id}/select-slot`)
+      .set("Cookie", mentee.cookie)
+      .send({ slotId: other.slots[0].id });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Slot not found for this matching");
+  });
+
+  test("returns 200 and selects the chosen slot", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching, slots } = await preparePendingMenteeWithSlots(
+      mentee,
+      mentor.user.id,
+      3
+    );
+    const chosen = slots[1];
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/select-slot`)
+      .set("Cookie", mentee.cookie)
+      .send({ slotId: chosen.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        mentee_id: mentee.user.id,
+        mentor_id: mentor.user.id,
+        selected_slot_id: chosen.id,
+        status: "MATCHED",
+      })
+    );
+
+    const chosenSlot = await pool.query(
+      `SELECT is_selected
+       FROM matching_slots
+       WHERE id = $1`,
+      [chosen.id]
+    );
+    expect(chosenSlot.rows[0].is_selected).toBe(true);
+
+    const selectedCount = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM matching_slots
+       WHERE matching_id = $1 AND is_selected = true`,
+      [matching.id]
+    );
+    expect(selectedCount.rows[0].count).toBe(1);
+  });
+});
