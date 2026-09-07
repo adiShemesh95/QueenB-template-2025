@@ -1,12 +1,11 @@
 import axios from "axios";
 import { MOCK_REQUESTS } from "./mockData";
-import { REQUEST_STATUS } from "./constants";
 
 /**
  * Matching data access layer.
  *
- * getRequests(), getRequestById(), and requestMoreTimes() call the real backend.
- * selectTimeSlot() still uses in-memory mock data until its API lands.
+ * getRequests(), getRequestById(), selectTimeSlot(), and requestMoreTimes()
+ * call the real backend.
  *
  * Contract:
  *   getRequests()            -> Promise<Request[]>
@@ -20,19 +19,6 @@ const matchingClient = axios.create({
 });
 
 let requestsStore = structuredClone(MOCK_REQUESTS);
-
-function findRequestOrThrow(id) {
-  const request = requestsStore.find((item) => item.id === id);
-  if (!request) {
-    throw new Error(`Request not found: ${id}`);
-  }
-  return request;
-}
-
-/** Simulate a short network delay so UI loading states are easy to test later. */
-function delay(ms = 120) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Maps a matching table row from GET /api/matching to the UI Request shape.
@@ -99,28 +85,14 @@ export async function getRequestById(id) {
 
 /**
  * Mentee confirms a suggested slot → request becomes MATCHED.
- * Replace with POST/PATCH to the real matching API later.
+ * POST /api/matching/:id/select-slot
  */
 export async function selectTimeSlot(requestId, slotId) {
-  await delay();
-  const request = findRequestOrThrow(requestId);
-
-  if (request.status !== REQUEST_STATUS.PENDING_MENTEE) {
-    throw new Error(
-      "Time selection is only available while waiting for mentee choice."
-    );
-  }
-
-  const slot = request.suggestedSlots.find((item) => item.id === slotId);
-  if (!slot) {
-    throw new Error(`Slot not found: ${slotId}`);
-  }
-
-  request.selectedSlot = { ...slot };
-  request.meetingAt = slot.start;
-  request.status = REQUEST_STATUS.MATCHED;
-
-  return structuredClone(request);
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/select-slot`,
+    { slotId }
+  );
+  return mapMatchingRow(response.data);
 }
 
 /**
