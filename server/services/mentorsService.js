@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { requestReschedule } = require("./matchingService");
 
 const MENTOR_TOPIC_OPTIONS = [
   "Mock Interview",
@@ -306,6 +307,7 @@ async function getMentorRequests(mentorUserId) {
       menteeId: row.mentee_id,
       mentorId: row.mentor_id,
       moreTimesRequested: Boolean(row.more_times_requested),
+      rescheduleUsed: Boolean(row.reschedule_used),
       selectedSlotId: row.selected_slot_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -468,6 +470,13 @@ async function rejectRequest(matchingId, mentorUserId) {
   return { matching: result.rows[0] };
 }
 
+/**
+ * Mentor starts a one-time post-MATCHED reschedule (shared matching rules).
+ */
+async function requestRescheduleAsMentor(matchingId, mentorUserId) {
+  return requestReschedule(matchingId, { mentorId: mentorUserId });
+}
+
 module.exports = {
   MENTOR_TOPIC_OPTIONS,
   toPublicMentor,
@@ -479,4 +488,5 @@ module.exports = {
   getMentorRequests,
   addSlotsToRequest,
   rejectRequest,
+  requestRescheduleAsMentor,
 };

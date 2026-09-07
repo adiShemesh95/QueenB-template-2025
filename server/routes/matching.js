@@ -8,6 +8,7 @@ const {
   requestMoreTimes,
   cancelMatching,
   selectSlot,
+  requestReschedule,
 } = require("../services/matchingService");
 const { getMentorProfileByUserId } = require("../services/mentorsService");
 
@@ -138,6 +139,51 @@ router.post("/:id/cancel", async (req, res) => {
   } catch (err) {
     console.error("POST /api/matching/:id/cancel failed:", err.message);
     return res.status(500).json({ error: "Failed to cancel matching" });
+  }
+});
+
+// POST /api/matching/:id/request-reschedule - Mentee starts one-time post-MATCHED reschedule
+router.post("/:id/request-reschedule", async (req, res) => {
+  try {
+    const menteeId = req.user?.id;
+
+    if (menteeId == null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchingId = Number(req.params.id);
+
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res.status(400).json({ error: "Valid matching id is required" });
+    }
+
+    const result = await requestReschedule(matchingId, {
+      menteeId: Number(menteeId),
+    });
+
+    if (result.error === "NOT_FOUND") {
+      return res.status(404).json({ error: "Matching not found" });
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json({
+        error: "Rescheduling is only available while status is MATCHED",
+      });
+    }
+
+    if (result.error === "ALREADY_USED") {
+      return res.status(409).json({
+        error: "Rescheduling was already used for this matching",
+      });
+    }
+
+    return res.status(200).json(result.matching);
+  } catch (err) {
+    console.error(
+      "POST /api/matching/:id/request-reschedule failed:",
+      err.message
+    );
+    return res.status(500).json({ error: "Failed to request reschedule" });
   }
 });
 

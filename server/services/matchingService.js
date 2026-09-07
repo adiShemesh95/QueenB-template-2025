@@ -104,6 +104,8 @@ async function enrichMatching(matching) {
     mentor_profile_image_url: mentorRow.profile_image_url || null,
     suggested_slots: suggestedSlots,
     selected_slot: selectedSlot,
+    more_times_requested: Boolean(matching.more_times_requested),
+    reschedule_used: Boolean(matching.reschedule_used),
   };
 }
 
@@ -327,6 +329,107 @@ async function selectSlot(matchingId, menteeId, slotId) {
   }
 }
 
+/**
+ * Start a one-time post-MATCHED reschedule.
+ * Caller must be the mentee or the mentor for this matching.
+ *
+ * @param {number} matchingId
+ * @param {{ menteeId?: number, mentorId?: number }} actor
+ * @returns {Promise<{ matching: object } | { error: string }>}
+ */
+async function requestReschedule(matchingId, actor = {}) {
+  const menteeId = actor.menteeId != null ? Number(actor.menteeId) : null;
+  const mentorId = actor.mentorId != null ? Number(actor.mentorId) : null;
+
+  if (
+    (menteeId == null && mentorId == null) ||
+    (menteeId != null && mentorId != null)
+  ) {
+    return { error: "NOT_FOUND" };
+  }
+
+  const ownershipSql =
+    menteeId != null
+      ? `id = $1 AND mentee_id = $2`
+      : `id = $1 AND mentor_id = $2`;
+  const actorId = menteeId != null ? menteeId : mentorId;
+
+  const matchingResult = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE ${ownershipSql}`,
+    [matchingId, actorId]
+  );
+  const matching = matchingResult.rows[0];
+
+  if (!matching) {
+    return { error: "NOT_FOUND" };
+  }
+
+  if (matching.status !== "MATCHED") {
+    return { error: "INVALID_STATUS" };
+  }
+
+  if (matching.reschedule_used) {
+    return { error: "ALREADY_USED" };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const cleared = await client.query(
+      `UPDATE matching
+       SET selected_slot_id = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+         AND status = 'MATCHED'
+         AND reschedule_used = false
+       RETURNING id`,
+      [matchingId]
+    );
+
+    if (!cleared.rows[0]) {
+      await client.query("ROLLBACK");
+      return { error: "INVALID_STATUS" };
+    }
+
+    await client.query(
+      `DELETE FROM matching_slots
+       WHERE matching_id = $1`,
+      [matchingId]
+    );
+
+    const updated = await client.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTOR',
+           reschedule_used = true,
+           more_times_requested = false,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [matchingId]
+    );
+
+    if (!updated.rows[0]) {
+      await client.query("ROLLBACK");
+      return { error: "NOT_FOUND" };
+    }
+
+    await client.query("COMMIT");
+    return { matching: await enrichMatching(updated.rows[0]) };
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {
+      // ignore rollback errors
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createMatching,
   userExists,
@@ -336,4 +439,5 @@ module.exports = {
   requestMoreTimes,
   cancelMatching,
   selectSlot,
+  requestReschedule,
 };

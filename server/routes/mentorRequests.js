@@ -4,6 +4,7 @@ const {
   getMentorRequests,
   addSlotsToRequest,
   rejectRequest,
+  requestRescheduleAsMentor,
 } = require("../services/mentorsService");
 const {
   validationError,
@@ -26,6 +27,60 @@ router.get("/", async (req, res) => {
     return res
       .status(500)
       .json(internalError("Failed to fetch mentor requests."));
+  }
+});
+
+// POST /api/mentor-requests/:id/request-reschedule - Mentor starts one-time post-MATCHED reschedule
+router.post("/:id/request-reschedule", async (req, res) => {
+  try {
+    const mentorUserId = req.user?.id;
+    if (mentorUserId == null) {
+      return res.status(401).json(buildError("UNAUTHORIZED", "Unauthorized"));
+    }
+
+    const matchingId = Number(req.params.id);
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res
+        .status(400)
+        .json(validationError("Valid request id is required."));
+    }
+
+    const result = await requestRescheduleAsMentor(
+      matchingId,
+      Number(mentorUserId)
+    );
+
+    if (result.error === "NOT_FOUND") {
+      return res
+        .status(404)
+        .json(buildError("NOT_FOUND", "Mentorship request not found."));
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json(
+        buildError(
+          "INVALID_STATUS",
+          "Rescheduling is only available while the request is matched."
+        )
+      );
+    }
+
+    if (result.error === "ALREADY_USED") {
+      return res.status(409).json(
+        buildError(
+          "ALREADY_USED",
+          "Rescheduling was already used for this request."
+        )
+      );
+    }
+
+    return res.status(200).json(result.matching);
+  } catch (err) {
+    console.error(
+      "POST /api/mentor-requests/:id/request-reschedule failed:",
+      err.message
+    );
+    return res.status(500).json(internalError("Failed to request reschedule."));
   }
 });
 
