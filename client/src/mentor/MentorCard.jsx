@@ -2,6 +2,7 @@ import React from "react";
 import { Avatar, Box, Button, Chip, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
+import { useMentorLanguage } from "./translations";
 
 function getInitials(name) {
   const parts = String(name || "")
@@ -18,7 +19,8 @@ function getInitials(name) {
  * LinkedIn-style mentor directory card.
  */
 function MentorCard({ mentor }) {
-  const displayName = mentor.username || "Mentor";
+  const { t } = useMentorLanguage();
+  const displayName = mentor.username || t.mentorFallback;
   const skills = Array.isArray(mentor.techStack) ? mentor.techStack : [];
   const topics = Array.isArray(mentor.topics) ? mentor.topics : [];
 
@@ -94,7 +96,7 @@ function MentorCard({ mentor }) {
               }}
             >
               {[mentor.job, mentor.company].filter(Boolean).join(" · ") ||
-                "Mentor"}
+                t.mentorFallback}
             </Typography>
           </Box>
         </Box>
@@ -151,7 +153,7 @@ function MentorCard({ mentor }) {
           },
         }}
       >
-        View profile
+        {t.viewProfile}
       </Button>
     </Box>
   );

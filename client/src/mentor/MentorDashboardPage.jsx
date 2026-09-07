@@ -23,15 +23,16 @@ import {
   proposeSlots,
   rejectMentorRequest,
 } from "./mentorService";
+import { useMentorLanguage } from "./translations";
 
 const DEFAULT_SESSION_DURATION_MINUTES = 60;
 
-const MENTOR_STATUS_FILTER_OPTIONS = [
-  { value: FILTER_ALL, label: "All" },
-  { value: REQUEST_STATUS.PENDING_MENTOR, label: "Waiting for mentor" },
-  { value: REQUEST_STATUS.PENDING_MENTEE, label: "Waiting for mentee" },
-  { value: REQUEST_STATUS.MATCHED, label: "Matched" },
-  { value: REQUEST_STATUS.REJECTED, label: "Rejected" },
+const MENTOR_STATUS_FILTER_VALUES = [
+  FILTER_ALL,
+  REQUEST_STATUS.PENDING_MENTOR,
+  REQUEST_STATUS.PENDING_MENTEE,
+  REQUEST_STATUS.MATCHED,
+  REQUEST_STATUS.REJECTED,
 ];
 
 const filterToggleGroupSx = {
@@ -151,13 +152,14 @@ function MentorRequestCard({
   actionLoadingId,
   sessionDurationMinutes,
 }) {
+  const { t, language } = useMentorLanguage();
   const [slotDrafts, setSlotDrafts] = useState([
     emptySlotDraft(),
     emptySlotDraft(),
   ]);
   const [localError, setLocalError] = useState("");
   const busy = actionLoadingId === request.id;
-  const menteeName = request.mentee?.username || "Mentee";
+  const menteeName = request.mentee?.username || t.menteeFallback;
   const canPropose = request.status === REQUEST_STATUS.PENDING_MENTOR;
   const canReject =
     request.status === REQUEST_STATUS.PENDING_MENTOR ||
@@ -194,7 +196,7 @@ function MentorRequestCard({
       .filter((slot) => slot.startTime && slot.endTime);
 
     if (slots.length === 0) {
-      setLocalError("Add at least one start time.");
+      setLocalError(t.addStartTime);
       return;
     }
 
@@ -246,7 +248,7 @@ function MentorRequestCard({
               sx={{ fontSize: 16, color: "#8A94A6" }}
             />
             <Typography sx={{ fontSize: "0.875rem", color: "#4A5568" }}>
-              Requested {formatDate(request.createdAt)}
+              {t.requestedOn(formatDate(request.createdAt, language))}
             </Typography>
           </Box>
         </Box>
@@ -270,7 +272,7 @@ function MentorRequestCard({
               },
             }}
           >
-            Reject
+            {t.reject}
           </Button>
         )}
       </Box>
@@ -287,7 +289,7 @@ function MentorRequestCard({
                 fontSize: "0.9rem",
               }}
             >
-              Proposed times
+              {t.proposedTimes}
             </Typography>
             <Stack spacing={0.75}>
               {request.suggestedSlots.map((slot) => (
@@ -302,7 +304,7 @@ function MentorRequestCard({
                     backgroundColor: "rgba(141, 216, 247, 0.12)",
                   }}
                 >
-                  {formatTimeRange(slot.start, slot.end)}
+                  {formatTimeRange(slot.start, slot.end, language)}
                 </Typography>
               ))}
             </Stack>
@@ -325,7 +327,7 @@ function MentorRequestCard({
               fontSize: "0.95rem",
             }}
           >
-            Offer time slots
+            {t.offerTimeSlots}
           </Typography>
 
           <Stack spacing={1.25} sx={{ mb: 1.5 }}>
@@ -347,7 +349,7 @@ function MentorRequestCard({
                     sx={{ flex: 1, minWidth: 0 }}
                   >
                     <TextField
-                      label={`Start ${index + 1}`}
+                      label={t.startSlot(index + 1)}
                       type="datetime-local"
                       value={draft.startLocal}
                       onChange={(e) => updateStart(index, e.target.value)}
@@ -357,7 +359,7 @@ function MentorRequestCard({
                       size="small"
                     />
                     <TextField
-                      label={`End ${index + 1}`}
+                      label={t.endSlot(index + 1)}
                       type="datetime-local"
                       value={endLocal}
                       InputProps={{ readOnly: true }}
@@ -368,7 +370,7 @@ function MentorRequestCard({
                     />
                   </Stack>
                   <IconButton
-                    aria-label={`Remove draft slot ${index + 1}`}
+                    aria-label={t.removeDraftSlot(index + 1)}
                     onClick={() => removeSlotDraft(index)}
                     disabled={busy}
                     size="small"
@@ -400,7 +402,7 @@ function MentorRequestCard({
               onClick={handlePropose}
               sx={primaryButtonSx}
             >
-              {busy ? "Sending…" : "Send proposed times"}
+              {busy ? t.sending : t.sendProposedTimes}
             </Button>
             <Button
               variant="text"
@@ -408,7 +410,7 @@ function MentorRequestCard({
               onClick={addSlotRow}
               sx={{ color: "#4A5568", fontWeight: 600 }}
             >
-              Add another slot
+              {t.addAnotherSlot}
             </Button>
           </Stack>
         </Box>
@@ -416,7 +418,7 @@ function MentorRequestCard({
 
       {request.status === REQUEST_STATUS.PENDING_MENTEE && (
         <Typography sx={{ mt: 1, fontSize: "0.875rem", color: "#6B7280" }}>
-          Waiting for the mentee to pick a time.
+          {t.waitingForMenteePick}
         </Typography>
       )}
 
@@ -424,7 +426,13 @@ function MentorRequestCard({
         <Typography
           sx={{ mt: 1, fontSize: "0.9rem", color: "#2F855A", fontWeight: 600 }}
         >
-          Meeting: {formatTimeRange(request.meetingAt, request.selectedSlot?.end)}
+          {t.meetingLabel(
+            formatTimeRange(
+              request.meetingAt,
+              request.selectedSlot?.end,
+              language
+            )
+          )}
         </Typography>
       )}
     </Box>
@@ -432,6 +440,7 @@ function MentorRequestCard({
 }
 
 function MentorDashboardPage() {
+  const { t } = useMentorLanguage();
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState(
@@ -491,12 +500,11 @@ function MentorDashboardPage() {
       await loadRequests();
       setFeedback({
         severity: "info",
-        message: "Request declined.",
+        message: t.requestDeclined,
       });
     } catch (err) {
       const message =
-        err?.response?.data?.error?.message ||
-        "Unable to reject this request.";
+        err?.response?.data?.error?.message || t.rejectError;
       setFeedback({ severity: "error", message });
     } finally {
       setActionLoadingId(null);
@@ -511,12 +519,11 @@ function MentorDashboardPage() {
       await loadRequests();
       setFeedback({
         severity: "success",
-        message: "Time slots sent to the mentee.",
+        message: t.slotsSentSuccess,
       });
     } catch (err) {
       const message =
-        err?.response?.data?.error?.message ||
-        "Unable to send time slots. Please try again.";
+        err?.response?.data?.error?.message || t.slotsSendError;
       setFeedback({ severity: "error", message });
     } finally {
       setActionLoadingId(null);
@@ -531,10 +538,10 @@ function MentorDashboardPage() {
 
   return (
     <MentorLayout
-      title="Mentor inbox"
-      subtitle="Review incoming requests, propose meeting times, or decline."
+      title={t.inboxTitle}
+      subtitle={t.inboxSubtitle}
       backTo="/mentors"
-      backLabel="Mentors"
+      backLabel={t.mentors}
     >
       {feedback && (
         <Alert severity={feedback.severity} sx={{ mb: 2, borderRadius: 3 }}>
@@ -553,13 +560,13 @@ function MentorDashboardPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading requests…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingRequests}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Unable to load mentor requests right now.
+          {t.loadRequestsError}
         </Alert>
       )}
 
@@ -575,10 +582,10 @@ function MentorDashboardPage() {
           }}
         >
           <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
-            No requests yet
+            {t.emptyRequestsTitle}
           </Typography>
           <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
-            When mentees request a session with you, they will show up here.
+            {t.emptyRequestsBody}
           </Typography>
         </Box>
       )}
@@ -600,12 +607,12 @@ function MentorDashboardPage() {
               onChange={(_event, next) => {
                 if (next !== null) setStatusFilter(next);
               }}
-              aria-label="Filter mentor requests by status"
+              aria-label={t.filterAria}
               sx={filterToggleGroupSx}
             >
-              {MENTOR_STATUS_FILTER_OPTIONS.map((option) => (
-                <ToggleButton key={option.value} value={option.value}>
-                  {option.label}
+              {MENTOR_STATUS_FILTER_VALUES.map((value) => (
+                <ToggleButton key={value} value={value}>
+                  {t.filters[value]}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
@@ -623,10 +630,10 @@ function MentorDashboardPage() {
               }}
             >
               <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
-                No requests in this filter
+                {t.emptyFilterTitle}
               </Typography>
               <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
-                Try another status, or choose All.
+                {t.emptyFilterBody}
               </Typography>
             </Box>
           ) : (

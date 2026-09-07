@@ -13,6 +13,7 @@ import {
 import MentorLayout from "./MentorLayout";
 import { getMentorById, requestMentorship } from "./mentorService";
 import { useAuth } from "../context/AuthContext";
+import { useMentorLanguage } from "./translations";
 
 const detailCardSx = {
   p: { xs: 2.25, sm: 3 },
@@ -54,9 +55,10 @@ function MentorProfileDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useMentorLanguage();
   const [mentor, setMentor] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [errorKey, setErrorKey] = useState(null);
   const [requesting, setRequesting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -66,18 +68,18 @@ function MentorProfileDetailPage() {
     async function load() {
       try {
         setLoading(true);
-        setError(null);
+        setErrorKey(null);
         const data = await getMentorById(id);
         if (cancelled) return;
         if (!data) {
-          setError("Mentor not found.");
+          setErrorKey("notFound");
           setMentor(null);
         } else {
           setMentor(data);
         }
       } catch (err) {
         if (!cancelled) {
-          setError("Unable to load this mentor profile.");
+          setErrorKey("loadError");
           console.error(err);
         }
       } finally {
@@ -99,24 +101,32 @@ function MentorProfileDetailPage() {
       await requestMentorship(mentor.userId);
       setFeedback({
         severity: "success",
-        message: "Request sent! Track it under My Requests.",
+        message: t.requestSentSuccess,
       });
     } catch (err) {
-      const message =
-        err?.response?.data?.error ||
-        "Unable to send mentorship request. Please try again.";
+      const message = err?.response?.data?.error;
       setFeedback({
         severity: "error",
-        message: typeof message === "string" ? message : message.message || "Request failed.",
+        message:
+          typeof message === "string"
+            ? message
+            : message?.message || t.requestSendError,
       });
     } finally {
       setRequesting(false);
     }
   };
 
+  const errorMessage =
+    errorKey === "loadError"
+      ? t.loadProfileError
+      : errorKey
+        ? t.mentorNotFound
+        : null;
+
   if (loading) {
     return (
-      <MentorLayout backTo="/mentors" backLabel="Mentors">
+      <MentorLayout backTo="/mentors" backLabel={t.mentors}>
         <Box
           sx={{
             display: "flex",
@@ -127,36 +137,40 @@ function MentorProfileDetailPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading profile…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingProfile}</Typography>
         </Box>
       </MentorLayout>
     );
   }
 
-  if (error || !mentor) {
+  if (errorMessage || !mentor) {
     return (
-      <MentorLayout backTo="/mentors" backLabel="Mentors">
+      <MentorLayout backTo="/mentors" backLabel={t.mentors}>
         <Alert severity="error" sx={{ borderRadius: 3, mb: 2 }}>
-          {error || "Mentor not found."}
+          {errorMessage || t.mentorNotFound}
         </Alert>
         <Button component={RouterLink} to="/mentors" variant="outlined">
-          Back to mentors
+          {t.backToMentors}
         </Button>
       </MentorLayout>
     );
   }
 
-  const displayName = mentor.username || "Mentor";
+  const displayName = mentor.username || t.mentorFallback;
   const isOwnProfile = user?.id === mentor.userId;
   const skills = Array.isArray(mentor.techStack) ? mentor.techStack : [];
   const topics = Array.isArray(mentor.topics) ? mentor.topics : [];
+  const jobCompanySubtitle =
+    mentor.job && mentor.company
+      ? t.jobAtCompany(mentor.job, mentor.company)
+      : [mentor.job, mentor.company].filter(Boolean).join(" · ") || undefined;
 
   return (
     <MentorLayout
       title={displayName}
-      subtitle={[mentor.job, mentor.company].filter(Boolean).join(" at ") || undefined}
+      subtitle={jobCompanySubtitle}
       backTo="/mentors"
-      backLabel="Mentors"
+      backLabel={t.mentors}
     >
       <Box sx={detailCardSx}>
         <Stack
@@ -197,8 +211,7 @@ function MentorProfileDetailPage() {
             </Typography>
             {mentor.yearsExperience != null && (
               <Typography sx={{ color: "#6B7280", fontSize: "0.9rem", mt: 0.5 }}>
-                {mentor.yearsExperience}{" "}
-                {mentor.yearsExperience === 1 ? "year" : "years"} experience
+                {t.yearsExperience(mentor.yearsExperience)}
               </Typography>
             )}
           </Box>
@@ -213,7 +226,7 @@ function MentorProfileDetailPage() {
                 onClick={() => navigate("/my-requests")}
                 sx={{ ml: 1, color: "#2F855A", fontWeight: 700 }}
               >
-                View requests
+                {t.viewRequests}
               </Button>
             )}
           </Alert>
@@ -229,7 +242,7 @@ function MentorProfileDetailPage() {
                 fontSize: "0.95rem",
               }}
             >
-              Mentoring topics
+              {t.mentoringTopics}
             </Typography>
             <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75}>
               {topics.map((topic) => (
@@ -258,7 +271,7 @@ function MentorProfileDetailPage() {
                 fontSize: "0.95rem",
               }}
             >
-              Tech stack
+              {t.techStack}
             </Typography>
             <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75}>
               {skills.map((skill) => (
@@ -287,7 +300,7 @@ function MentorProfileDetailPage() {
                 fontSize: "0.95rem",
               }}
             >
-              Background
+              {t.background}
             </Typography>
             <Typography
               sx={{ color: "#4A5568", lineHeight: 1.65, whiteSpace: "pre-wrap" }}
@@ -304,12 +317,12 @@ function MentorProfileDetailPage() {
         >
           {mentor.sessionDuration != null && (
             <Typography sx={{ color: "#6B7280", fontSize: "0.9rem" }}>
-              Session length: {mentor.sessionDuration} min
+              {t.sessionLength(mentor.sessionDuration)}
             </Typography>
           )}
           {mentor.maxSessions != null && (
             <Typography sx={{ color: "#6B7280", fontSize: "0.9rem" }}>
-              Max sessions: {mentor.maxSessions}
+              {t.maxSessionsLabel(mentor.maxSessions)}
             </Typography>
           )}
         </Stack>
@@ -321,7 +334,7 @@ function MentorProfileDetailPage() {
             onClick={handleRequest}
             sx={primaryButtonSx}
           >
-            {requesting ? "Sending request…" : "Request mentorship"}
+            {requesting ? t.sendingRequest : t.requestMentorship}
           </Button>
         )}
 
@@ -344,7 +357,7 @@ function MentorProfileDetailPage() {
               },
             }}
           >
-            Edit my mentor profile
+            {t.editMyMentorProfile}
           </Button>
         )}
       </Box>

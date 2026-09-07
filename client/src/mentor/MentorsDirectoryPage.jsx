@@ -11,8 +11,10 @@ import { Link as RouterLink } from "react-router-dom";
 import MentorLayout from "./MentorLayout";
 import MentorCard from "./MentorCard";
 import { getMentors } from "./mentorService";
+import { useMentorLanguage } from "./translations";
 
 function MentorsDirectoryPage() {
+  const { t } = useMentorLanguage();
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -44,10 +46,10 @@ function MentorsDirectoryPage() {
 
   return (
     <MentorLayout
-      title="Find a mentor"
-      subtitle="Browse active mentors and request a session that fits your goals."
+      title={t.findMentorTitle}
+      subtitle={t.findMentorSubtitle}
       backTo="/"
-      backLabel="Home"
+      backLabel={t.home}
       actions={
         <Button
           component={RouterLink}
@@ -68,7 +70,7 @@ function MentorsDirectoryPage() {
             },
           }}
         >
-          Become a mentor
+          {t.becomeMentor}
         </Button>
       }
     >
@@ -83,13 +85,13 @@ function MentorsDirectoryPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading mentors…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingMentors}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Unable to load mentors right now. Please try again.
+          {t.loadMentorsError}
         </Alert>
       )}
 
@@ -105,10 +107,10 @@ function MentorsDirectoryPage() {
           }}
         >
           <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
-            No mentors yet
+            {t.emptyMentorsTitle}
           </Typography>
           <Typography sx={{ color: "#6B7280", fontSize: "0.95rem", mb: 2 }}>
-            Be the first to create a mentor profile for the community.
+            {t.emptyMentorsBody}
           </Typography>
           <Button
             component={RouterLink}
@@ -122,7 +124,7 @@ function MentorsDirectoryPage() {
               boxShadow: "0 8px 20px rgba(247, 95, 138, 0.22)",
             }}
           >
-            Become a mentor
+            {t.becomeMentor}
           </Button>
         </Box>
       )}
