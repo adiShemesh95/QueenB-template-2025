@@ -5,7 +5,7 @@ const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const authMiddleware = require("./middleware/authMiddleware");
-
+const adminMiddleware = require("./middleware/adminMiddleware");
 
 const { internalError, validationError } = require("./utils/errors");
 
@@ -43,6 +43,13 @@ app.use(
   "/api/matching",
   authMiddleware,
   require("./routes/matching")
+);
+// Admin APIs: authenticate first, then authorize Admin capability server-side.
+app.use(
+  "/api/admin",
+  authMiddleware,
+  adminMiddleware,
+  require("./routes/admin")
 );
 
 app.get("/api/health", (req, res) => {
