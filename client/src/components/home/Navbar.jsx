@@ -47,7 +47,7 @@ function Navbar({ language, onLanguageChange, t }) {
           maxWidth: 1200,
           width: "100%",
           mx: "auto",
-          // Keep language selector fixed in the top-right.
+          // Force LTR so RTL locales do not reverse toolbar order.
           direction: "ltr",
         }}
       >

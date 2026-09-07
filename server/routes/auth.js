@@ -5,6 +5,7 @@ const authService = require("../services/authService");
 const { internalError, buildError } = require("../utils/errors");
 const { setAuthCookie, clearAuthCookie } = require("../utils/cookies");
 
+// HTTP layer only: rate-limit, call authService, set/clear the auth cookie.
 const authWriteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === "test" ? 1000 : 100,

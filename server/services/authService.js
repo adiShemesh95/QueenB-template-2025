@@ -8,9 +8,12 @@ const {
   usernameTakenError,
 } = require("../utils/errors");
 
+// Auth business logic: validate input, hash passwords, issue JWTs (routes set cookies).
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+// bcrypt only uses the first 72 bytes of a password, so longer input is rejected.
 const MAX_PASSWORD_BYTES = 72;
 
 function toPublicUser(row) {
@@ -87,6 +90,10 @@ function validateRegisterInput(body) {
     });
   }
 
+  // Registration passwords must be strong enough to resist guessing.
+  // This backend check is the source of truth — even if the frontend also validates,
+  // a client can skip those checks, so we always enforce the rules here.
+  // Length/byte limits below are separate from the composition (strength) checks.
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
     details.push({
       field: "password",
@@ -96,6 +103,26 @@ function validateRegisterInput(body) {
     details.push({
       field: "password",
       message: "Password is too long.",
+    });
+  } else if (!/[A-Z]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one uppercase letter.",
+    });
+  } else if (!/[a-z]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one lowercase letter.",
+    });
+  } else if (!/[0-9]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one number.",
+    });
+  } else if (!/[^A-Za-z0-9]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one special character.",
     });
   }
 
@@ -149,6 +176,7 @@ function validateLoginInput(body) {
   return { email, password };
 }
 
+// Parameterized queries ($1, …) keep user input out of the SQL string.
 async function findUserByEmail(email) {
   const result = await pool.query(
     `SELECT id, email, username, password_hash, created_at
@@ -196,6 +224,7 @@ async function register(body) {
       [email, username, passwordHash]
     );
   } catch (err) {
+    // 23505: unique violation if two requests pass the pre-checks at once.
     if (err.code === "23505") {
       if (err.constraint === "users_email_unique" || /email/i.test(err.detail || "")) {
         return { status: 409, body: emailTakenError() };
@@ -224,6 +253,7 @@ async function login(body) {
   }
 
   const { email, password } = validated;
+  // Same response for unknown email and wrong password (no user enumeration).
   const credentialsError = {
     status: 401,
     body: invalidCredentialsError(),

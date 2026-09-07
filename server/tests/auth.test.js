@@ -144,6 +144,14 @@ describe("POST /api/auth/register", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password must be at least 8 characters.",
+        }),
+      ])
+    );
   });
 
   test("password longer than 72 UTF-8 bytes returns 400", async () => {
@@ -159,6 +167,95 @@ describe("POST /api/auth/register", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password is too long.",
+        }),
+      ])
+    );
+  });
+
+  // Password-strength cases: each missing requirement must be rejected on register.
+  test("password without uppercase returns 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send(makeUser({ password: "password1!", confirmPassword: "password1!" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password must include at least one uppercase letter.",
+        }),
+      ])
+    );
+  });
+
+  test("password without lowercase returns 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send(makeUser({ password: "PASSWORD1!", confirmPassword: "PASSWORD1!" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password must include at least one lowercase letter.",
+        }),
+      ])
+    );
+  });
+
+  test("password without number returns 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send(makeUser({ password: "Password!", confirmPassword: "Password!" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password must include at least one number.",
+        }),
+      ])
+    );
+  });
+
+  test("password without special character returns 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send(makeUser({ password: "Password1", confirmPassword: "Password1" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "password",
+          message: "Password must include at least one special character.",
+        }),
+      ])
+    );
+  });
+
+  test("valid strong password registers successfully", async () => {
+    const payload = makeUser({
+      password: "Str0ng!Pass",
+      confirmPassword: "Str0ng!Pass",
+    });
+    const res = await request(app).post("/api/auth/register").send(payload);
+
+    expect(res.status).toBe(201);
+    assertSafeUser(res.body.user);
+    expect(getCookieValue(res, COOKIE_NAME)).toBeTruthy();
   });
 
   test("mismatched confirmation returns 400", async () => {
@@ -200,6 +297,7 @@ describe("POST /api/auth/login", () => {
     assertSafeUser(res.body.user);
   });
 
+  // Confirms login does not reveal whether the email exists.
   test("wrong password and unknown email return identical INVALID_CREDENTIALS", async () => {
     const payload = makeUser();
     await request(app).post("/api/auth/register").send(payload);

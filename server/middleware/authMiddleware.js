@@ -8,6 +8,7 @@ const {
 } = require("../utils/errors");
 const { COOKIE_NAME } = require("../utils/cookies");
 
+// Verifies the httpOnly JWT cookie and attaches req.user before protected handlers run.
 async function authMiddleware(req, res, next) {
   try {
     const token = req.cookies && req.cookies[COOKIE_NAME];
