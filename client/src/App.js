@@ -29,6 +29,16 @@ import MentorProfileDetailPage from "./mentor/MentorProfileDetailPage";
 import BecomeMentorPage from "./mentor/BecomeMentorPage";
 import MentorDashboardPage from "./mentor/MentorDashboardPage";
 
+// Admin frontend (Stage 5) — isolated under client/src/admin.
+// Calendar and Admin Alerts are intentionally not wired here.
+import AdminRoute from "./admin/AdminRoute";
+import AdminLayout from "./admin/AdminLayout";
+import AdminDashboardPage from "./admin/AdminDashboardPage";
+import AdminUsersPage from "./admin/AdminUsersPage";
+import AdminUserDetailsPage from "./admin/AdminUserDetailsPage";
+import AdminMatchingsPage from "./admin/AdminMatchingsPage";
+import AdminMatchingDetailsPage from "./admin/AdminMatchingDetailsPage";
+
 function MatchingRoutes() {
   return (
     <MatchingLanguageProvider>
@@ -129,6 +139,24 @@ function App() {
                     <MentorDashboardPage />
                   </ProtectedRoute>
                 }
+              />
+            </Route>
+
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="users/:id" element={<AdminUserDetailsPage />} />
+              <Route path="matchings" element={<AdminMatchingsPage />} />
+              <Route
+                path="matchings/:id"
+                element={<AdminMatchingDetailsPage />}
               />
             </Route>
           </Routes>
