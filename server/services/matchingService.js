@@ -191,6 +191,99 @@ async function requestMoreTimes(matchingId, menteeId) {
   return { matching: await enrichMatching(result.rows[0]) };
 }
 
+/**
+ * Mentee selects a suggested time slot and completes the match.
+ * Allowed only when status is PENDING_MENTEE and the slot belongs to this matching.
+ *
+ * @param {number} matchingId
+ * @param {number} menteeId
+ * @param {number} slotId
+ * @returns {Promise<{ matching: object } | { error: string }>}
+ */
+async function selectSlot(matchingId, menteeId, slotId) {
+  const matchingResult = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE id = $1 AND mentee_id = $2`,
+    [matchingId, menteeId]
+  );
+  const matching = matchingResult.rows[0];
+
+  if (!matching) {
+    return { error: "NOT_FOUND" };
+  }
+
+  if (matching.status !== "PENDING_MENTEE") {
+    return { error: "INVALID_STATUS" };
+  }
+
+  const slotResult = await pool.query(
+    `SELECT id
+     FROM matching_slots
+     WHERE id = $1 AND matching_id = $2`,
+    [slotId, matchingId]
+  );
+
+  if (!slotResult.rows[0]) {
+    return { error: "SLOT_NOT_FOUND" };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Ensure only one slot is selected for this matching
+    await client.query(
+      `UPDATE matching_slots
+       SET is_selected = false
+       WHERE matching_id = $1`,
+      [matchingId]
+    );
+
+    const selectedSlot = await client.query(
+      `UPDATE matching_slots
+       SET is_selected = true
+       WHERE id = $1 AND matching_id = $2
+       RETURNING id`,
+      [slotId, matchingId]
+    );
+
+    if (!selectedSlot.rows[0]) {
+      await client.query("ROLLBACK");
+      return { error: "SLOT_NOT_FOUND" };
+    }
+
+    const updatedMatching = await client.query(
+      `UPDATE matching
+       SET selected_slot_id = $1,
+           status = 'MATCHED',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+         AND mentee_id = $3
+         AND status = 'PENDING_MENTEE'
+       RETURNING *`,
+      [slotId, matchingId, menteeId]
+    );
+
+    if (!updatedMatching.rows[0]) {
+      await client.query("ROLLBACK");
+      return { error: "INVALID_STATUS" };
+    }
+
+    await client.query("COMMIT");
+    return { matching: await enrichMatching(updatedMatching.rows[0]) };
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {
+      // ignore rollback errors
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createMatching,
   userExists,
@@ -198,4 +291,5 @@ module.exports = {
   getMatchingsByMentee,
   getMatchingByIdForMentee,
   requestMoreTimes,
+  selectSlot,
 };

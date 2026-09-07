@@ -8,8 +8,6 @@ require("dotenv").config();
 const pool = require("../db");
 
 const createMatchingTableSQL = `
--- TODO: Add foreign key once related table exists locally:
---   selected_slot_id -> matching_slots.id
 CREATE TABLE IF NOT EXISTS matching (
   id SERIAL PRIMARY KEY,
   mentor_id INTEGER NOT NULL,
@@ -47,6 +45,17 @@ BEGIN
     ALTER TABLE matching
       ADD CONSTRAINT matching_mentee_id_fkey
       FOREIGN KEY (mentee_id) REFERENCES users (id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'matching_selected_slot_id_fkey'
+      AND conrelid = 'matching'::regclass
+  ) THEN
+    ALTER TABLE matching
+      ADD CONSTRAINT matching_selected_slot_id_fkey
+      FOREIGN KEY (selected_slot_id) REFERENCES matching_slots (id);
   END IF;
 END $$;
 `;

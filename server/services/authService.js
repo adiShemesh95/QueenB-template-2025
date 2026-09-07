@@ -13,6 +13,7 @@ const {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+// bcrypt only uses the first 72 bytes of a password, so longer input is rejected.
 const MAX_PASSWORD_BYTES = 72;
 
 // Single source of truth for the safe/public user shape (never expose password_hash).
@@ -93,6 +94,10 @@ function validateRegisterInput(body) {
     });
   }
 
+  // Registration passwords must be strong enough to resist guessing.
+  // This backend check is the source of truth — even if the frontend also validates,
+  // a client can skip those checks, so we always enforce the rules here.
+  // Length/byte limits below are separate from the composition (strength) checks.
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
     details.push({
       field: "password",
@@ -102,6 +107,26 @@ function validateRegisterInput(body) {
     details.push({
       field: "password",
       message: "Password is too long.",
+    });
+  } else if (!/[A-Z]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one uppercase letter.",
+    });
+  } else if (!/[a-z]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one lowercase letter.",
+    });
+  } else if (!/[0-9]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one number.",
+    });
+  } else if (!/[^A-Za-z0-9]/.test(password)) {
+    details.push({
+      field: "password",
+      message: "Password must include at least one special character.",
     });
   }
 

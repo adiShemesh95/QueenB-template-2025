@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 const {
   createMatching,
-  userExists,
   findActiveMatching,
   getMatchingsByMentee,
   getMatchingByIdForMentee,
   requestMoreTimes,
+  selectSlot,
 } = require("../services/matchingService");
 const { getMentorProfileByUserId } = require("../services/mentorsService");
 
@@ -95,6 +95,49 @@ router.post("/:id/request-more-times", async (req, res) => {
   } catch (err) {
     console.error("POST /api/matching/:id/request-more-times failed:", err.message);
     return res.status(500).json({ error: "Failed to request more times" });
+  }
+});
+
+// POST /api/matching/:id/select-slot - Mentee selects a suggested time slot
+router.post("/:id/select-slot", async (req, res) => {
+  try {
+    const menteeId = req.user?.id;
+
+    if (menteeId == null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchingId = Number(req.params.id);
+    const { slotId } = req.body;
+
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res.status(400).json({ error: "Valid matching id is required" });
+    }
+
+    if (slotId == null || !Number.isInteger(Number(slotId)) || Number(slotId) <= 0) {
+      return res.status(400).json({ error: "Valid slotId is required" });
+    }
+
+    const result = await selectSlot(matchingId, Number(menteeId), Number(slotId));
+
+    if (result.error === "NOT_FOUND") {
+      return res.status(404).json({ error: "Matching not found" });
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json({
+        error: "Slot selection is only available while status is PENDING_MENTEE"
+      });
+    }
+
+    if (result.error === "SLOT_NOT_FOUND") {
+      return res.status(404).json({ error: "Slot not found for this matching" });
+    }
+
+    return res.status(200).json(result.matching);
+  } catch (err) {
+    console.error("POST /api/matching/:id/select-slot failed:", err.message);
+    return res.status(500).json({ error: "Failed to select slot" });
   }
 });
 
