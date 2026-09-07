@@ -15,9 +15,12 @@ import { REQUEST_STATUS } from "../matching/constants";
 import { formatDate, formatTimeRange } from "../matching/utils";
 import {
   getMentorRequests,
+  getMyMentorProfile,
   proposeSlots,
   rejectMentorRequest,
 } from "./mentorService";
+
+const DEFAULT_SESSION_DURATION_MINUTES = 60;
 
 const glassCardSx = {
   p: { xs: 2, sm: 2.5 },
@@ -45,7 +48,7 @@ const primaryButtonSx = {
 };
 
 function emptySlotDraft() {
-  return { startLocal: "", endLocal: "" };
+  return { startLocal: "" };
 }
 
 function localInputToIso(localValue) {
@@ -55,11 +58,28 @@ function localInputToIso(localValue) {
   return date.toISOString();
 }
 
+/** Format a Date as a datetime-local input value in the browser's local timezone. */
+function dateToLocalInput(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function addMinutesToLocalInput(localValue, minutes) {
+  if (!localValue || !Number.isFinite(minutes)) return "";
+  const date = new Date(localValue);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setMinutes(date.getMinutes() + minutes);
+  return dateToLocalInput(date);
+}
+
 function MentorRequestCard({
   request,
   onReject,
   onProposeSlots,
   actionLoadingId,
+  sessionDurationMinutes,
 }) {
   const [slotDrafts, setSlotDrafts] = useState([
     emptySlotDraft(),
@@ -73,9 +93,11 @@ function MentorRequestCard({
     request.status === REQUEST_STATUS.PENDING_MENTOR ||
     request.status === REQUEST_STATUS.PENDING_MENTEE;
 
-  const updateSlot = (index, field, value) => {
+  const updateStart = (index, value) => {
     setSlotDrafts((prev) =>
-      prev.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot))
+      prev.map((slot, i) =>
+        i === index ? { ...slot, startLocal: value } : slot
+      )
     );
   };
 
@@ -86,22 +108,20 @@ function MentorRequestCard({
   const handlePropose = async () => {
     setLocalError("");
     const slots = slotDrafts
-      .map((draft) => ({
-        startTime: localInputToIso(draft.startLocal),
-        endTime: localInputToIso(draft.endLocal),
-      }))
+      .map((draft) => {
+        const startTime = localInputToIso(draft.startLocal);
+        const endLocal = addMinutesToLocalInput(
+          draft.startLocal,
+          sessionDurationMinutes
+        );
+        const endTime = localInputToIso(endLocal);
+        return { startTime, endTime };
+      })
       .filter((slot) => slot.startTime && slot.endTime);
 
     if (slots.length === 0) {
-      setLocalError("Add at least one complete start/end time.");
+      setLocalError("Add at least one start time.");
       return;
-    }
-
-    for (const slot of slots) {
-      if (new Date(slot.endTime) <= new Date(slot.startTime)) {
-        setLocalError("Each end time must be after its start time.");
-        return;
-      }
     }
 
     await onProposeSlots(request.id, slots);
@@ -234,38 +254,40 @@ function MentorRequestCard({
           </Typography>
 
           <Stack spacing={1.25} sx={{ mb: 1.5 }}>
-            {slotDrafts.map((draft, index) => (
-              <Stack
-                key={`slot-draft-${index}`}
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1.25}
-              >
-                <TextField
-                  label={`Start ${index + 1}`}
-                  type="datetime-local"
-                  value={draft.startLocal}
-                  onChange={(e) =>
-                    updateSlot(index, "startLocal", e.target.value)
-                  }
-                  disabled={busy}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  size="small"
-                />
-                <TextField
-                  label={`End ${index + 1}`}
-                  type="datetime-local"
-                  value={draft.endLocal}
-                  onChange={(e) =>
-                    updateSlot(index, "endLocal", e.target.value)
-                  }
-                  disabled={busy}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  size="small"
-                />
-              </Stack>
-            ))}
+            {slotDrafts.map((draft, index) => {
+              const endLocal = addMinutesToLocalInput(
+                draft.startLocal,
+                sessionDurationMinutes
+              );
+              return (
+                <Stack
+                  key={`slot-draft-${index}`}
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.25}
+                >
+                  <TextField
+                    label={`Start ${index + 1}`}
+                    type="datetime-local"
+                    value={draft.startLocal}
+                    onChange={(e) => updateStart(index, e.target.value)}
+                    disabled={busy}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                  />
+                  <TextField
+                    label={`End ${index + 1}`}
+                    type="datetime-local"
+                    value={endLocal}
+                    InputProps={{ readOnly: true }}
+                    disabled={busy}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                  />
+                </Stack>
+              );
+            })}
           </Stack>
 
           {localError ? (
@@ -314,6 +336,9 @@ function MentorRequestCard({
 
 function MentorDashboardPage() {
   const [requests, setRequests] = useState([]);
+  const [sessionDurationMinutes, setSessionDurationMinutes] = useState(
+    DEFAULT_SESSION_DURATION_MINUTES
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -331,8 +356,19 @@ function MentorDashboardPage() {
       try {
         setLoading(true);
         setError(false);
-        const data = await getMentorRequests();
-        if (!cancelled) setRequests(data);
+        const [profile, data] = await Promise.all([
+          getMyMentorProfile(),
+          getMentorRequests(),
+        ]);
+        if (!cancelled) {
+          const duration = Number(profile?.sessionDuration);
+          setSessionDurationMinutes(
+            Number.isInteger(duration) && duration > 0
+              ? duration
+              : DEFAULT_SESSION_DURATION_MINUTES
+          );
+          setRequests(data);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(true);
@@ -450,6 +486,7 @@ function MentorDashboardPage() {
               key={request.id}
               request={request}
               actionLoadingId={actionLoadingId}
+              sessionDurationMinutes={sessionDurationMinutes}
               onReject={handleReject}
               onProposeSlots={handleProposeSlots}
             />
