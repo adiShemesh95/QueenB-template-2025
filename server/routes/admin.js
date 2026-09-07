@@ -5,6 +5,7 @@ const {
   listUsersForAdmin,
   getUserForAdmin,
   listMatchingsForAdmin,
+  getMatchingForAdmin,
 } = require("../services/adminService");
 const {
   buildError,
@@ -67,6 +68,36 @@ router.get("/matchings", async (req, res) => {
     return res.status(200).json({ matchings });
   } catch (err) {
     console.error("GET /api/admin/matchings failed:", err.message);
+    return res.status(500).json(internalError());
+  }
+});
+
+// GET /api/admin/matchings/:id — one matching with Admin-safe detail.
+// Admin authorization is already enforced on /api/admin in app.js.
+// This route only handles matching-id validation and retrieval.
+// Read-only: does not change matching status, slots, or teammate matching logic.
+router.get("/matchings/:id", async (req, res) => {
+  try {
+    const matchingId = Number(req.params.id);
+
+    // Same positive-integer rule as Admin user detail (/users/:id).
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res
+        .status(400)
+        .json(validationError("Valid matching id is required."));
+    }
+
+    const matching = await getMatchingForAdmin(matchingId);
+
+    if (!matching) {
+      return res
+        .status(404)
+        .json(buildError("NOT_FOUND", "Matching not found."));
+    }
+
+    return res.status(200).json({ matching });
+  } catch (err) {
+    console.error("GET /api/admin/matchings/:id failed:", err.message);
     return res.status(500).json(internalError());
   }
 });
