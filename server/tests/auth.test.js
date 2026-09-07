@@ -53,10 +53,12 @@ function assertSafeUser(user) {
       email: expect.any(String),
       username: expect.any(String),
       createdAt: expect.anything(),
+      isAdmin: expect.any(Boolean),
     })
   );
   expect(user).not.toHaveProperty("password_hash");
   expect(user).not.toHaveProperty("password");
+  expect(user).not.toHaveProperty("is_admin");
   expect(JSON.stringify(user)).not.toMatch(/password_hash/i);
 }
 
@@ -234,6 +236,7 @@ describe("GET /api/users/me", () => {
 
     expect(res.status).toBe(200);
     assertSafeUser(res.body.user);
+    expect(res.body.user.isAdmin).toBe(false);
   });
 
   test("missing cookie returns 401 UNAUTHORIZED", async () => {
@@ -249,6 +252,103 @@ describe("GET /api/users/me", () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+});
+
+describe("Admin foundation (isAdmin)", () => {
+  test("newly registered user has isAdmin === false by default", async () => {
+    const payload = makeUser();
+    const res = await request(app).post("/api/auth/register").send(payload);
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.isAdmin).toBe(false);
+  });
+
+  test("registration ignores client-supplied isAdmin / is_admin", async () => {
+    const payload = makeUser({ isAdmin: true, is_admin: true });
+    const res = await request(app).post("/api/auth/register").send(payload);
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.isAdmin).toBe(false);
+
+    const me = await request(app)
+      .get("/api/users/me")
+      .set("Cookie", res.headers["set-cookie"]);
+    expect(me.status).toBe(200);
+    expect(me.body.user.isAdmin).toBe(false);
+  });
+
+  test("GET /api/users/me returns isAdmin for an admin promoted server-side", async () => {
+    const payload = makeUser();
+    const registerRes = await request(app)
+      .post("/api/auth/register")
+      .send(payload);
+    const userId = registerRes.body.user.id;
+
+    // Admin promotion is database-controlled only (no public self-promote API).
+    await pool.query(`UPDATE users SET is_admin = TRUE WHERE id = $1`, [userId]);
+
+    const res = await request(app)
+      .get("/api/users/me")
+      .set("Cookie", registerRes.headers["set-cookie"]);
+
+    expect(res.status).toBe(200);
+    assertSafeUser(res.body.user);
+    expect(res.body.user.isAdmin).toBe(true);
+  });
+});
+
+describe("adminMiddleware", () => {
+  const adminMiddleware = require("../middleware/adminMiddleware");
+
+  function mockRes() {
+    const res = {};
+    res.status = jest.fn().mockReturnValue(res);
+    res.json = jest.fn().mockReturnValue(res);
+    return res;
+  }
+
+  test("allows an Admin user", () => {
+    const req = { user: { id: 1, isAdmin: true } };
+    const res = mockRes();
+    const next = jest.fn();
+
+    adminMiddleware(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  test("blocks an authenticated non-admin with HTTP 403", () => {
+    const req = { user: { id: 2, isAdmin: false } };
+    const res = mockRes();
+    const next = jest.fn();
+
+    adminMiddleware(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ code: "FORBIDDEN" }),
+      })
+    );
+  });
+
+  test("handles missing req.user safely with 401 UNAUTHORIZED", () => {
+    const req = {};
+    const res = mockRes();
+    const next = jest.fn();
+
+    adminMiddleware(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+      })
+    );
   });
 });
 

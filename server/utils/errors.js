@@ -20,6 +20,10 @@ function unauthorizedError(message = "Authentication required.") {
   return buildError("UNAUTHORIZED", message);
 }
 
+function forbiddenError(message = "Admin access required.") {
+  return buildError("FORBIDDEN", message);
+}
+
 function emailTakenError(message = "An account with this email already exists.") {
   return buildError("EMAIL_TAKEN", message);
 }
@@ -39,6 +43,7 @@ module.exports = {
   validationError,
   invalidCredentialsError,
   unauthorizedError,
+  forbiddenError,
   emailTakenError,
   usernameTakenError,
   internalError,

@@ -15,12 +15,16 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_BYTES = 72;
 
+// Single source of truth for the safe/public user shape (never expose password_hash).
+// isAdmin maps from users.is_admin — a capability flag, not a mutually exclusive role
+// (a user may simultaneously be Admin, Mentor, and Mentee).
 function toPublicUser(row) {
   return {
     id: row.id,
     email: row.email,
     username: row.username,
     createdAt: row.created_at,
+    isAdmin: row.is_admin === true,
   };
 }
 
@@ -154,7 +158,7 @@ function validateLoginInput(body) {
 // Parameterized queries ($1, …) keep user input out of the SQL string.
 async function findUserByEmail(email) {
   const result = await pool.query(
-    `SELECT id, email, username, password_hash, created_at
+    `SELECT id, email, username, password_hash, created_at, is_admin
      FROM users
      WHERE email = $1`,
     [email]
@@ -190,12 +194,14 @@ async function register(body) {
 
   const passwordHash = await hashPassword(password);
 
+  // Insert only email/username/password_hash. Never accept is_admin / isAdmin from
+  // the client — Admin privilege is server/database-controlled (DEFAULT FALSE).
   let result;
   try {
     result = await pool.query(
       `INSERT INTO users (email, username, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, email, username, created_at`,
+       RETURNING id, email, username, created_at, is_admin`,
       [email, username, passwordHash]
     );
   } catch (err) {

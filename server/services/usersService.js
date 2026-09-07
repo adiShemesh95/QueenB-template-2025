@@ -7,7 +7,7 @@ function getAllUsers() {
 
 async function findById(id) {
   const result = await pool.query(
-    `SELECT id, email, username, created_at
+    `SELECT id, email, username, created_at, is_admin
      FROM users
      WHERE id = $1`,
     [id]
