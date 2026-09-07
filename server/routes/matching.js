@@ -6,6 +6,7 @@ const {
   getMatchingsByMentee,
   getMatchingByIdForMentee,
   requestMoreTimes,
+  cancelMatching,
   selectSlot,
 } = require("../services/matchingService");
 const { getMentorProfileByUserId } = require("../services/mentorsService");
@@ -95,6 +96,48 @@ router.post("/:id/request-more-times", async (req, res) => {
   } catch (err) {
     console.error("POST /api/matching/:id/request-more-times failed:", err.message);
     return res.status(500).json({ error: "Failed to request more times" });
+  }
+});
+
+// POST /api/matching/:id/cancel - Mentee cancels after a second slot set still does not work
+router.post("/:id/cancel", async (req, res) => {
+  try {
+    const menteeId = req.user?.id;
+
+    if (menteeId == null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchingId = Number(req.params.id);
+
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res.status(400).json({ error: "Valid matching id is required" });
+    }
+
+    const result = await cancelMatching(matchingId, Number(menteeId));
+
+    if (result.error === "NOT_FOUND") {
+      return res.status(404).json({ error: "Matching not found" });
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json({
+        error:
+          "Cancellation is only available while status is PENDING_MENTEE",
+      });
+    }
+
+    if (result.error === "CANCEL_NOT_ALLOWED") {
+      return res.status(400).json({
+        error:
+          "Cancellation is only available after additional times were already requested",
+      });
+    }
+
+    return res.status(200).json(result.matching);
+  } catch (err) {
+    console.error("POST /api/matching/:id/cancel failed:", err.message);
+    return res.status(500).json({ error: "Failed to cancel matching" });
   }
 });
 

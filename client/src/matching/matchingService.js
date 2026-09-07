@@ -106,6 +106,17 @@ export async function requestMoreTimes(requestId) {
   return mapMatchingRow(response.data);
 }
 
+/**
+ * Mentee cancels after a second slot set still does not work.
+ * POST /api/matching/:id/cancel
+ */
+export async function cancelMatchingRequest(requestId) {
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/cancel`
+  );
+  return mapMatchingRow(response.data);
+}
+
 /** Test helper — resets mock store to the initial seed data. */
 export function __resetMockRequests() {
   requestsStore = structuredClone(MOCK_REQUESTS);

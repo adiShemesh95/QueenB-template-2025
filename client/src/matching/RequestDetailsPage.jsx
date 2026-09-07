@@ -16,6 +16,7 @@ import HighlightOffRoundedIcon from "@mui/icons-material/HighlightOffRounded";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import MatchingLayout from "./MatchingLayout";
 import {
+  cancelMatchingRequest,
   getRequestById,
   requestMoreTimes,
   selectTimeSlot,
@@ -181,6 +182,21 @@ function RequestDetailsPage() {
       setFeedbackKey({ severity: "info", key: "moreTimesSuccess" });
     } catch (err) {
       setFeedbackKey({ severity: "warning", key: "moreTimesError" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!request) return;
+    try {
+      setActionLoading(true);
+      setFeedbackKey(null);
+      const updated = await cancelMatchingRequest(request.id);
+      setRequest(updated);
+      setFeedbackKey({ severity: "info", key: "cancelSuccess" });
+    } catch (err) {
+      setFeedbackKey({ severity: "error", key: "cancelError" });
     } finally {
       setActionLoading(false);
     }
@@ -405,6 +421,30 @@ function RequestDetailsPage() {
               >
                 {t.moreTimesHint}
               </Typography>
+            )}
+
+            {request.moreTimesRequested && (
+              <Button
+                variant="outlined"
+                disabled={actionLoading}
+                onClick={handleCancelRequest}
+                sx={{
+                  mt: 2,
+                  px: 2.5,
+                  py: 1.15,
+                  borderRadius: 3,
+                  borderWidth: 1.5,
+                  borderColor: "rgba(113, 128, 150, 0.45)",
+                  color: "#4A5568",
+                  "&:hover": {
+                    borderWidth: 1.5,
+                    borderColor: "#4A5568",
+                    backgroundColor: "rgba(113, 128, 150, 0.08)",
+                  },
+                }}
+              >
+                {t.cancelRequest}
+              </Button>
             )}
           </>
         )}

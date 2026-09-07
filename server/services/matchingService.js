@@ -192,6 +192,49 @@ async function requestMoreTimes(matchingId, menteeId) {
 }
 
 /**
+ * Mentee cancels a request after additional times were already requested
+ * and the mentor proposed a second set of slots.
+ * Allowed only when status is PENDING_MENTEE and more_times_requested is true.
+ *
+ * @param {number} matchingId
+ * @param {number} menteeId
+ * @returns {Promise<{ matching: object } | { error: string }>}
+ */
+async function cancelMatching(matchingId, menteeId) {
+  const matching = await getMatchingByIdForMentee(matchingId, menteeId);
+
+  if (!matching) {
+    return { error: "NOT_FOUND" };
+  }
+
+  if (matching.status !== "PENDING_MENTEE") {
+    return { error: "INVALID_STATUS" };
+  }
+
+  if (!matching.more_times_requested) {
+    return { error: "CANCEL_NOT_ALLOWED" };
+  }
+
+  const result = await pool.query(
+    `UPDATE matching
+     SET status = 'REJECTED',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND mentee_id = $2
+       AND status = 'PENDING_MENTEE'
+       AND more_times_requested = true
+     RETURNING *`,
+    [matchingId, menteeId]
+  );
+
+  if (!result.rows[0]) {
+    return { error: "NOT_FOUND" };
+  }
+
+  return { matching: await enrichMatching(result.rows[0]) };
+}
+
+/**
  * Mentee selects a suggested time slot and completes the match.
  * Allowed only when status is PENDING_MENTEE and the slot belongs to this matching.
  *
@@ -291,5 +334,6 @@ module.exports = {
   getMatchingsByMentee,
   getMatchingByIdForMentee,
   requestMoreTimes,
+  cancelMatching,
   selectSlot,
 };

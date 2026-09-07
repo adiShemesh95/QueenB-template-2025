@@ -844,3 +844,105 @@ describe("POST /api/matching/:id/select-slot", () => {
     expect(selectedCount.rows[0].count).toBe(1);
   });
 });
+
+describe("POST /api/matching/:id/cancel", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  test("returns 200 and sets status to REJECTED when allowed", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        mentee_id: mentee.user.id,
+        mentor_id: mentor.user.id,
+        more_times_requested: true,
+        status: "REJECTED",
+      })
+    );
+  });
+
+  test("returns 400 when status is not PENDING_MENTEE", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    expect(matching.status).toBe("PENDING_MENTOR");
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Cancellation is only available while status is PENDING_MENTEE"
+    );
+  });
+
+  test("returns 400 when more_times_requested is false", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = false
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Cancellation is only available after additional times were already requested"
+    );
+  });
+
+  test("returns 404 when the matching belongs to another mentee", async () => {
+    const owner = await registerAuthenticatedUser();
+    const otherMentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(owner, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", otherMentee.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+});

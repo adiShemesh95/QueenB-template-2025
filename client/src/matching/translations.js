@@ -69,6 +69,9 @@ const translations = {
     moreTimesSuccess:
       "We asked your mentor for more times. You can only do this once per request.",
     moreTimesError: "Could not request more times.",
+    cancelRequest: "Cancel request",
+    cancelSuccess: "This mentoring request was cancelled.",
+    cancelError: "Could not cancel this request.",
   },
   he: {
     languageAria: "בחירת שפה",
@@ -133,6 +136,9 @@ const translations = {
     moreTimesSuccess:
       "ביקשנו מהמנטורית מועדים נוספים. אפשר לעשות זאת רק פעם אחת לכל בקשה.",
     moreTimesError: "לא ניתן לבקש מועדים נוספים.",
+    cancelRequest: "ביטול הבקשה",
+    cancelSuccess: "בקשת המנטורינג בוטלה.",
+    cancelError: "לא ניתן לבטל את הבקשה.",
   },
 };
 
