@@ -21,10 +21,9 @@ const pageBackground = `
 `;
 
 const navItems = [
-  { to: "/admin", label: "Overview", end: true },
+  { to: "/admin/calendar", label: "Calendar" },
   { to: "/admin/users", label: "Users" },
   { to: "/admin/matchings", label: "Matchings" },
-  { to: "/admin/calendar", label: "Calendar" },
 ];
 
 // Admin Alerts are intentionally omitted — owned by another teammate.

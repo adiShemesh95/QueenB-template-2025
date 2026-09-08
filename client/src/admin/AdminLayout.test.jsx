@@ -28,6 +28,13 @@ jest.mock("../components/Logo", () => {
   };
 });
 
+jest.mock("../components/BootcampFooter", () => {
+  const React = require("react");
+  return function MockBootcampFooter() {
+    return React.createElement("footer", { "data-testid": "bootcamp-footer" });
+  };
+});
+
 jest.mock("react-router-dom", () => {
   const React = require("react");
   const MockLink = React.forwardRef(function MockLink(
@@ -39,12 +46,12 @@ jest.mock("react-router-dom", () => {
   return {
     Link: MockLink,
     Outlet: () => React.createElement("div", null, "Outlet"),
-    useLocation: () => ({ pathname: "/admin" }),
+    useLocation: () => ({ pathname: "/admin/calendar" }),
     useNavigate: () => mockNavigate,
   };
 });
 
-describe("AdminLayout logout", () => {
+describe("AdminLayout", () => {
   beforeEach(() => {
     mockLogout.mockReset();
     mockNavigate.mockReset();
@@ -75,5 +82,33 @@ describe("AdminLayout logout", () => {
     expect(
       screen.queryByRole("link", { name: /queens match/i })
     ).not.toBeInTheDocument();
+  });
+
+  test("BootcampFooter remains in the Admin shell", () => {
+    render(<AdminLayout />);
+    expect(screen.getByTestId("bootcamp-footer")).toBeInTheDocument();
+  });
+
+  test("Admin navigation no longer includes Overview", () => {
+    render(<AdminLayout />);
+
+    expect(
+      screen.queryByRole("link", { name: /^overview$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test("Admin navigation order is Calendar, Users, Matchings", () => {
+    render(<AdminLayout />);
+
+    const nav = screen.getByRole("navigation", { name: /^admin$/i });
+    const links = Array.from(nav.querySelectorAll("a")).map((link) =>
+      link.getAttribute("href")
+    );
+
+    expect(links).toEqual([
+      "/admin/calendar",
+      "/admin/users",
+      "/admin/matchings",
+    ]);
   });
 });

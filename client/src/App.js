@@ -33,7 +33,7 @@ import MentorDashboardPage from "./mentor/MentorDashboardPage";
 // Admin Alerts are intentionally not wired here (owned by another teammate).
 import AdminRoute from "./admin/AdminRoute";
 import AdminLayout from "./admin/AdminLayout";
-import AdminDashboardPage from "./admin/AdminDashboardPage";
+import AdminIndexRedirect from "./admin/AdminIndexRedirect";
 import AdminUsersPage from "./admin/AdminUsersPage";
 import AdminUserDetailsPage from "./admin/AdminUserDetailsPage";
 import AdminMatchingsPage from "./admin/AdminMatchingsPage";
@@ -151,7 +151,7 @@ function App() {
                 </AdminRoute>
               }
             >
-              <Route index element={<AdminDashboardPage />} />
+              <Route index element={<AdminIndexRedirect />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="users/:id" element={<AdminUserDetailsPage />} />
               <Route path="matchings" element={<AdminMatchingsPage />} />
