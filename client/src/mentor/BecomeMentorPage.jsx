@@ -8,6 +8,7 @@ import {
   FormControlLabel,
   FormGroup,
   FormHelperText,
+  Snackbar,
   Stack,
   TextField,
   ThemeProvider,
@@ -182,7 +183,7 @@ function BecomeMentorPage() {
       setIsEdit(true);
       setSuccessMessage(isEdit ? t.profileUpdated : t.profileLive);
 
-      if (saved?.id) {
+      if (saved?.id && isActive) {
         setTimeout(() => navigate(`/mentors/${saved.id}`), 700);
       }
     } catch (err) {
@@ -243,11 +244,6 @@ function BecomeMentorPage() {
         {generalError ? (
           <Alert severity="error" sx={{ borderRadius: 2 }}>
             {generalError}
-          </Alert>
-        ) : null}
-        {successMessage ? (
-          <Alert severity="success" sx={{ borderRadius: 2 }}>
-            {successMessage}
           </Alert>
         ) : null}
 
@@ -435,6 +431,22 @@ function BecomeMentorPage() {
           )}
         </Button>
         </Box>
+
+        <Snackbar
+          open={Boolean(successMessage)}
+          autoHideDuration={3000}
+          onClose={() => setSuccessMessage("")}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="success"
+            variant="filled"
+            onClose={() => setSuccessMessage("")}
+            sx={{ borderRadius: 2, width: "100%" }}
+          >
+            {successMessage}
+          </Alert>
+        </Snackbar>
       </ThemeProvider>
     </MentorLayout>
   );
