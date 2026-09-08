@@ -12,6 +12,18 @@ const {
   cancelMatchedMeeting,
 } = require("../services/matchingService");
 const { getMentorProfileByUserId } = require("../services/mentorsService");
+const { ALLOWED_SOURCES } = require("../services/analyticsService");
+
+function normalizeMatchingSource(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === "") {
+    return { value: "direct" };
+  }
+  const value = String(raw).trim();
+  if (!ALLOWED_SOURCES.includes(value)) {
+    return { error: true };
+  }
+  return { value };
+}
 
 // TODO: Wire team auth middleware so req.user is set from the session/JWT.
 // Until then, this route expects req.user.id (mentee) and returns 401 if missing.
@@ -279,10 +291,17 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { mentorId } = req.body;
+    const { mentorId, source: rawSource } = req.body;
 
     if (mentorId == null || !Number.isInteger(Number(mentorId)) || Number(mentorId) <= 0) {
       return res.status(400).json({ error: "Valid mentorId is required" });
+    }
+
+    const sourceResult = normalizeMatchingSource(rawSource);
+    if (sourceResult.error) {
+      return res.status(400).json({
+        error: "source must be one of: whatsapp, linkedin, copy_link, direct",
+      });
     }
 
     if (Number(mentorId) === Number(menteeId)) {
@@ -305,7 +324,11 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const matching = await createMatching(Number(menteeId), Number(mentorId));
+    const matching = await createMatching(
+      Number(menteeId),
+      Number(mentorId),
+      sourceResult.value
+    );
     return res.status(201).json(matching);
   } catch (err) {
     console.error("POST /api/matching failed:", err.message);

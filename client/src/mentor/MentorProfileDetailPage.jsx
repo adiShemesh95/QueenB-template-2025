@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link as RouterLink, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Alert,
   Avatar,
@@ -8,12 +13,25 @@ import {
   Chip,
   CircularProgress,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import MentorLayout from "./MentorLayout";
 import { getMentorById, requestMentorship } from "./mentorService";
 import { useAuth } from "../context/AuthContext";
 import { useMentorLanguage, getMentorTopicLabel } from "./translations";
+import { trackProfileViewed } from "../analytics/analyticsClient";
+import {
+  buildLinkedInShareUrl,
+  buildMentorShareUrl,
+  buildWhatsAppShareUrl,
+  hasTrackedMentorProfileView,
+  markMentorProfileViewTracked,
+  normalizeAttributionSource,
+  persistMentorAttribution,
+  readMentorAttribution,
+} from "../analytics/attribution";
 
 const detailCardSx = {
   p: { xs: 2.25, sm: 3 },
@@ -40,6 +58,21 @@ const primaryButtonSx = {
   },
 };
 
+const shareButtonSx = {
+  textTransform: "none",
+  fontWeight: 600,
+  borderRadius: 999,
+  px: 1.5,
+  py: 0.6,
+  fontSize: "0.8rem",
+  borderColor: "rgba(247, 95, 138, 0.35)",
+  color: "#D93F68",
+  "&:hover": {
+    borderColor: "#E04872",
+    backgroundColor: "rgba(247, 95, 138, 0.06)",
+  },
+};
+
 function getInitials(name) {
   const parts = String(name || "")
     .trim()
@@ -53,6 +86,7 @@ function getInitials(name) {
 
 function MentorProfileDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useMentorLanguage();
@@ -61,6 +95,18 @@ function MentorProfileDetailPage() {
   const [errorKey, setErrorKey] = useState(null);
   const [requesting, setRequesting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState(null);
+
+  const querySource = useMemo(
+    () => normalizeAttributionSource(searchParams.get("source")),
+    [searchParams]
+  );
+
+  useEffect(() => {
+    if (id != null) {
+      persistMentorAttribution(id, querySource);
+    }
+  }, [id, querySource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,12 +139,52 @@ function MentorProfileDetailPage() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!mentor?.userId || !id) return;
+
+    const source = readMentorAttribution(id);
+    if (hasTrackedMentorProfileView(id, source)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function trackView() {
+      try {
+        markMentorProfileViewTracked(id, source);
+        await trackProfileViewed({
+          mentorUserId: mentor.userId,
+          source,
+          metadata: { mentorProfileId: Number(id) || id },
+        });
+      } catch (err) {
+        if (!cancelled) {
+          // Allow a later successful attempt in this session if the request failed.
+          try {
+            sessionStorage.removeItem(
+              `qm_analytics:viewed:v1:${id}:${source}`
+            );
+          } catch {
+            // ignore
+          }
+          console.error("analytics profile view failed:", err?.message || err);
+        }
+      }
+    }
+
+    trackView();
+    return () => {
+      cancelled = true;
+    };
+  }, [mentor, id]);
+
   const handleRequest = async () => {
     if (!mentor || requesting) return;
     try {
       setRequesting(true);
       setFeedback(null);
-      await requestMentorship(mentor.userId);
+      const source = readMentorAttribution(id);
+      await requestMentorship(mentor.userId, source);
       setFeedback({
         severity: "success",
         message: t.requestSentSuccess,
@@ -114,6 +200,31 @@ function MentorProfileDetailPage() {
       });
     } finally {
       setRequesting(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = buildMentorShareUrl(id, "copy_link");
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopyFeedback(t.linkCopied);
+      window.setTimeout(() => setCopyFeedback(null), 2500);
+    } catch (err) {
+      console.error(err);
+      setCopyFeedback(t.linkCopyFailed);
+      window.setTimeout(() => setCopyFeedback(null), 2500);
     }
   };
 
@@ -164,6 +275,11 @@ function MentorProfileDetailPage() {
     mentor.job && mentor.company
       ? t.jobAtCompany(mentor.job, mentor.company)
       : [mentor.job, mentor.company].filter(Boolean).join(" · ") || undefined;
+  const whatsappUrl = buildWhatsAppShareUrl(
+    id,
+    t.shareMentorMessage(displayName)
+  );
+  const linkedInUrl = buildLinkedInShareUrl(id);
 
   return (
     <MentorLayout
@@ -195,7 +311,7 @@ function MentorProfileDetailPage() {
           >
             {getInitials(displayName)}
           </Avatar>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               sx={{
                 fontWeight: 700,
@@ -216,6 +332,59 @@ function MentorProfileDetailPage() {
             )}
           </Box>
         </Stack>
+
+        <Box sx={{ mb: 2.5 }}>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              color: "#07142D",
+              mb: 1,
+              fontSize: "0.95rem",
+            }}
+          >
+            {t.shareMentor}
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
+            <Button
+              component="a"
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outlined"
+              size="small"
+              sx={shareButtonSx}
+            >
+              {t.shareWhatsApp}
+            </Button>
+            <Button
+              component="a"
+              href={linkedInUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outlined"
+              size="small"
+              sx={shareButtonSx}
+            >
+              {t.shareLinkedIn}
+            </Button>
+            <Tooltip title={copyFeedback || t.copyLink}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleCopyLink}
+                startIcon={<ContentCopyRoundedIcon fontSize="small" />}
+                sx={shareButtonSx}
+              >
+                {t.copyLink}
+              </Button>
+            </Tooltip>
+          </Stack>
+          {copyFeedback && (
+            <Typography sx={{ mt: 1, fontSize: "0.85rem", color: "#2F855A" }}>
+              {copyFeedback}
+            </Typography>
+          )}
+        </Box>
 
         {feedback && (
           <Alert severity={feedback.severity} sx={{ mb: 2.5, borderRadius: 3 }}>

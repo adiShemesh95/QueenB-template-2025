@@ -119,7 +119,32 @@ describe("SignInPage", () => {
       email: "ok@example.com",
       password: "password1",
     });
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true })
+    );
+  });
+
+  test("successful login returns to preserved mentor share URL", async () => {
+    mockLocationState.current = {
+      from: "/mentors/12?source=whatsapp",
+    };
+    mockLogin.mockResolvedValue({
+      user: { id: 1, email: "ok@example.com", username: "ok_user" },
+    });
+    renderPage();
+    await fillValidForm({
+      email: "ok@example.com",
+      password: "password1",
+    });
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/mentors/12?source=whatsapp", {
+        replace: true,
+      })
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard", {
+      replace: true,
+    });
   });
 
   test("Admin login intent returns Admin to /admin and does not show Sign Up", async () => {
@@ -233,6 +258,8 @@ describe("SignInPage", () => {
     resolveLogin({
       user: { id: 1, email: "user@example.com", username: "valid_user" },
     });
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true })
+    );
   });
 });

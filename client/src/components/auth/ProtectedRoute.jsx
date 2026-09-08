@@ -2,6 +2,7 @@ import React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getSafeReturnPath } from "./returnPath";
 
 function AuthLoadingState({ label = "Loading..." }) {
   return (
@@ -21,26 +22,33 @@ function AuthLoadingState({ label = "Loading..." }) {
   );
 }
 
+function getAdminReturnPath(from) {
+  if (typeof from === "string" && from.startsWith("/admin")) {
+    return from;
+  }
+  return "/admin";
+}
+
 // Blocks unauthenticated users from private pages (e.g. dashboard).
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <AuthLoadingState label="Checking your session..." />;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    );
   }
 
   return children;
-}
-
-function getAdminReturnPath(from) {
-  if (typeof from === "string" && from.startsWith("/admin")) {
-    return from;
-  }
-  return "/admin";
 }
 
 // Keeps logged-in users off guest-only pages (home, sign up, sign in).
@@ -61,6 +69,12 @@ function GuestRoute({ children }) {
         <Navigate to={getAdminReturnPath(location.state?.from)} replace />
       );
     }
+
+    const returnTo = getSafeReturnPath(location.state?.from);
+    if (returnTo) {
+      return <Navigate to={returnTo} replace />;
+    }
+
     return <Navigate to="/dashboard" replace />;
   }
 

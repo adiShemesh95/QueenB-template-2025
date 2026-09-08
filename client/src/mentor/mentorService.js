@@ -90,9 +90,10 @@ export async function cancelMatchedMeeting(requestId) {
 }
 
 /** POST /api/matching — mentee requests this mentor (mentorId = users.id) */
-export async function requestMentorship(mentorUserId) {
+export async function requestMentorship(mentorUserId, source = "direct") {
   const response = await mentorClient.post("/api/matching", {
     mentorId: Number(mentorUserId),
+    source,
   });
   return response.data;
 }

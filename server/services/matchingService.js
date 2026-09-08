@@ -1,4 +1,8 @@
 const pool = require("../db");
+const {
+  trackEvent,
+  getMatchingAttribution,
+} = require("./analyticsService");
 
 /**
  * Creates a new matching request between a mentee and a mentor.
@@ -6,9 +10,10 @@ const pool = require("../db");
  *
  * @param {number} menteeId - Authenticated mentee user id
  * @param {number} mentorId - Mentor user id from the request body
+ * @param {string} [source='direct'] - Referral attribution source
  * @returns {Promise<object>} The created matching row
  */
-async function createMatching(menteeId, mentorId) {
+async function createMatching(menteeId, mentorId, source = "direct") {
   const result = await pool.query(
     `INSERT INTO matching (mentee_id, mentor_id)
      VALUES ($1, $2)
@@ -16,7 +21,28 @@ async function createMatching(menteeId, mentorId) {
     [menteeId, mentorId]
   );
 
-  return enrichMatching(result.rows[0]);
+  const matching = result.rows[0];
+
+  // Observability only — never roll back a successful product create.
+  try {
+    const analyticsResult = await trackEvent({
+      eventType: "mentoring_request_sent",
+      userId: menteeId,
+      mentorUserId: mentorId,
+      matchingId: matching.id,
+      source,
+    });
+    if (analyticsResult?.error) {
+      console.error(
+        "analytics mentoring_request_sent validation failed:",
+        analyticsResult
+      );
+    }
+  } catch (err) {
+    console.error("analytics mentoring_request_sent failed:", err.message);
+  }
+
+  return enrichMatching(matching);
 }
 
 /**
@@ -318,7 +344,45 @@ async function selectSlot(matchingId, menteeId, slotId) {
     }
 
     await client.query("COMMIT");
-    return { matching: await enrichMatching(updatedMatching.rows[0]) };
+    const enriched = await enrichMatching(updatedMatching.rows[0]);
+
+    // Observability only — product transition already committed.
+    try {
+      const source = await getMatchingAttribution(matchingId);
+      const mentorUserId = updatedMatching.rows[0].mentor_id;
+
+      const slotAnalytics = await trackEvent({
+        eventType: "slot_selected",
+        userId: menteeId,
+        mentorUserId,
+        matchingId,
+        source,
+        metadata: { slotId },
+      });
+      if (slotAnalytics?.error) {
+        console.error("analytics slot_selected validation failed:", slotAnalytics);
+      }
+
+      if (updatedMatching.rows[0].status === "MATCHED") {
+        const matchAnalytics = await trackEvent({
+          eventType: "match_confirmed",
+          userId: menteeId,
+          mentorUserId,
+          matchingId,
+          source,
+        });
+        if (matchAnalytics?.error) {
+          console.error(
+            "analytics match_confirmed validation failed:",
+            matchAnalytics
+          );
+        }
+      }
+    } catch (err) {
+      console.error("analytics slot/match tracking failed:", err.message);
+    }
+
+    return { matching: enriched };
   } catch (err) {
     try {
       await client.query("ROLLBACK");

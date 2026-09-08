@@ -14,6 +14,7 @@ import { useMatchingLanguage } from "../../matching/MatchingLanguageContext";
 import BootcampFooter from "../BootcampFooter";
 import LanguageSelector from "../home/LanguageSelector";
 import translations from "./translations";
+import { getSafeReturnPath } from "./returnPath";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -106,7 +107,8 @@ function SignInPage() {
           navigate("/admin", { replace: true });
         }
       } else {
-        navigate("/dashboard");
+        const returnTo = getSafeReturnPath(location.state?.from);
+        navigate(returnTo || "/dashboard", { replace: true });
       }
     } catch (err) {
       const apiError = err?.response?.data?.error;

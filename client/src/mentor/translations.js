@@ -48,6 +48,14 @@ const translations = {
     requestSendError: "Unable to send mentorship request. Please try again.",
     viewRequests: "View requests",
     editMyMentorProfile: "Edit my mentor profile",
+    shareMentor: "Share this mentor",
+    shareWhatsApp: "WhatsApp",
+    shareLinkedIn: "LinkedIn",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
+    linkCopyFailed: "Could not copy link",
+    shareMentorMessage: (name) =>
+      `Check out ${name} on Queens Match — request a mentoring session:`,
 
     // Become mentor
     becomeMentorTitle: "Become a mentor",
@@ -169,6 +177,14 @@ const translations = {
     requestSendError: "לא ניתן לשלוח בקשת מנטורינג. נסי שוב.",
     viewRequests: "לצפייה בבקשות",
     editMyMentorProfile: "עריכת פרופיל המנטורית שלי",
+    shareMentor: "שיתוף המנטורית",
+    shareWhatsApp: "WhatsApp",
+    shareLinkedIn: "LinkedIn",
+    copyLink: "העתקת קישור",
+    linkCopied: "הקישור הועתק",
+    linkCopyFailed: "לא ניתן להעתיק את הקישור",
+    shareMentorMessage: (name) =>
+      `הכירי את ${name} ב-Queens Match — בקשי מפגש מנטורינג:`,
 
     becomeMentorTitle: "להפוך למנטורית",
     editMentorTitle: "עריכת פרופיל מנטורית",
@@ -286,6 +302,14 @@ const translations = {
     requestSendError: "تعذر إرسال طلب الإرشاد. يرجى المحاولة مرة أخرى.",
     viewRequests: "عرض الطلبات",
     editMyMentorProfile: "تعديل ملف المرشدة الخاص بي",
+    shareMentor: "مشاركة هذه المرشدة",
+    shareWhatsApp: "WhatsApp",
+    shareLinkedIn: "LinkedIn",
+    copyLink: "نسخ الرابط",
+    linkCopied: "تم نسخ الرابط",
+    linkCopyFailed: "تعذر نسخ الرابط",
+    shareMentorMessage: (name) =>
+      `تعرّفي على ${name} في Queens Match — اطلبي جلسة إرشاد:`,
 
     becomeMentorTitle: "كوني مرشدة",
     editMentorTitle: "تعديل ملف المرشدة",
