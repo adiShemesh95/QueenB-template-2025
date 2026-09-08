@@ -7,8 +7,8 @@ function BootcampFooter({ t }) {
       component="footer"
       sx={{
         backgroundColor: "transparent",
-        pt: { xs: "8px", sm: "12px" },
-        pb: { xs: "32px", sm: "40px" },
+        pt: { xs: "4px", sm: "8px" },
+        pb: { xs: "20px", sm: "28px" },
         px: 2,
         textAlign: "center",
         direction: "ltr",
@@ -18,10 +18,10 @@ function BootcampFooter({ t }) {
         component="p"
         sx={{
           m: 0,
-          mb: "20px",
+          mb: "14px",
           color: "#F75F8A",
           fontWeight: 600,
-          fontSize: { xs: "15px", sm: "16px", md: "17px" },
+          fontSize: { xs: "13px", sm: "14px", md: "15px" },
           letterSpacing: "0.28em",
           textTransform: "uppercase",
           direction: "ltr",
@@ -37,7 +37,7 @@ function BootcampFooter({ t }) {
           alignItems: "center",
           justifyContent: "center",
           flexWrap: "nowrap",
-          gap: { xs: 1.5, sm: 2, md: 2.25 },
+          gap: { xs: 1.25, sm: 1.75, md: 2 },
           direction: "ltr",
           maxWidth: "100%",
           transform: "none",
@@ -53,7 +53,7 @@ function BootcampFooter({ t }) {
           className="footer-logo appsflyer-logo"
           sx={{
             display: "block",
-            height: { xs: 28, sm: 34, md: 36 },
+            height: { xs: 22, sm: 26, md: 28 },
             width: "auto",
             objectFit: "contain",
             flexShrink: 0,
@@ -69,7 +69,7 @@ function BootcampFooter({ t }) {
           sx={{
             color: "#07142D",
             fontWeight: 500,
-            fontSize: { xs: "24px", sm: "28px", md: "30px" },
+            fontSize: { xs: "18px", sm: "22px", md: "24px" },
             lineHeight: 1,
             display: "flex",
             alignItems: "center",
@@ -87,7 +87,7 @@ function BootcampFooter({ t }) {
           className="footer-logo queenb-logo"
           sx={{
             display: "block",
-            height: { xs: 34, sm: 40, md: 42 },
+            height: { xs: 26, sm: 32, md: 34 },
             width: "auto",
             objectFit: "contain",
             flexShrink: 0,

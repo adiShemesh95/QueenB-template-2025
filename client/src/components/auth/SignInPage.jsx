@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import BootcampFooter from "../BootcampFooter";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -137,14 +138,21 @@ function SignInPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        px: 3,
-        py: 4,
         background:
           "linear-gradient(160deg, #EAF7FD 0%, #F9FBFF 45%, #FDF2F6 100%)",
       }}
     >
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 3,
+          py: 4,
+        }}
+      >
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -269,6 +277,8 @@ function SignInPage() {
           Back to home
         </Button>
       </Box>
+      </Box>
+      <BootcampFooter />
     </Box>
   );
 }

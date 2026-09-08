@@ -3,6 +3,7 @@ import { Box, Container, Typography, Button } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { Link as RouterLink } from "react-router-dom";
 import MatchingHeader from "./MatchingHeader";
+import BootcampFooter from "../components/BootcampFooter";
 import { useMatchingLanguage } from "./MatchingLanguageContext";
 
 const pageBackground = `
@@ -122,6 +123,7 @@ function MatchingLayout({
           {children}
         </Container>
       </Box>
+      <BootcampFooter />
     </Box>
   );
 }

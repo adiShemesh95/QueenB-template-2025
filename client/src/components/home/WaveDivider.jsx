@@ -27,7 +27,7 @@ function WaveDivider() {
         sx={{
           display: "block",
           width: "100%",
-          height: { xs: 72, sm: 96, md: 112 },
+          height: { xs: 56, sm: 72, md: 88 },
         }}
       >
         {/* Softer translucent pink ribbon — sits slightly behind / above */}
