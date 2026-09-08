@@ -3,7 +3,6 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Outlet,
 } from "react-router-dom";
 
 import { ThemeProvider, CssBaseline } from "@mui/material";
@@ -40,59 +39,51 @@ import AdminMatchingsPage from "./admin/AdminMatchingsPage";
 import AdminMatchingDetailsPage from "./admin/AdminMatchingDetailsPage";
 import AdminCalendarPage from "./admin/AdminCalendarPage";
 
-function MatchingRoutes() {
-  return (
-    <MatchingLanguageProvider>
-      <Outlet />
-    </MatchingLanguageProvider>
-  );
-}
-
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
       <AuthProvider>
-        <Router>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <GuestRoute>
-                  <Home />
-                </GuestRoute>
-              }
-            />
+        <MatchingLanguageProvider>
+          <Router>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <GuestRoute>
+                    <Home />
+                  </GuestRoute>
+                }
+              />
 
-            <Route
-              path="/register"
-              element={
-                <GuestRoute>
-                  <SignUpPage />
-                </GuestRoute>
-              }
-            />
+              <Route
+                path="/register"
+                element={
+                  <GuestRoute>
+                    <SignUpPage />
+                  </GuestRoute>
+                }
+              />
 
-            <Route
-              path="/login"
-              element={
-                <GuestRoute>
-                  <SignInPage />
-                </GuestRoute>
-              }
-            />
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <SignInPage />
+                  </GuestRoute>
+                }
+              />
 
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route element={<MatchingRoutes />}>
               <Route
                 path="/my-requests"
                 element={
@@ -141,28 +132,28 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-            </Route>
 
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminLayout />
-                </AdminRoute>
-              }
-            >
-              <Route index element={<AdminIndexRedirect />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="users/:id" element={<AdminUserDetailsPage />} />
-              <Route path="matchings" element={<AdminMatchingsPage />} />
               <Route
-                path="matchings/:id"
-                element={<AdminMatchingDetailsPage />}
-              />
-              <Route path="calendar" element={<AdminCalendarPage />} />
-            </Route>
-          </Routes>
-        </Router>
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminLayout />
+                  </AdminRoute>
+                }
+              >
+                <Route index element={<AdminIndexRedirect />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="users/:id" element={<AdminUserDetailsPage />} />
+                <Route path="matchings" element={<AdminMatchingsPage />} />
+                <Route
+                  path="matchings/:id"
+                  element={<AdminMatchingDetailsPage />}
+                />
+                <Route path="calendar" element={<AdminCalendarPage />} />
+              </Route>
+            </Routes>
+          </Router>
+        </MatchingLanguageProvider>
       </AuthProvider>
     </ThemeProvider>
   );

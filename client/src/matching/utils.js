@@ -7,6 +7,7 @@
 const LOCALE_MAP = {
   en: "en-GB",
   he: "he-IL",
+  ar: "ar",
 };
 
 function getLocale(language = "en") {

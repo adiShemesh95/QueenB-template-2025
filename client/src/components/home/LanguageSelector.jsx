@@ -12,6 +12,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "he", label: "עברית" },
+  { code: "ar", label: "العربية" },
 ];
 
 function LanguageSelector({

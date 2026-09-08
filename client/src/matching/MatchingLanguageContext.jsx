@@ -8,13 +8,14 @@ import React, {
 import translations from "./translations";
 
 const STORAGE_KEY = "queenb-matching-language";
+const SUPPORTED_LANGUAGES = new Set(["en", "he", "ar"]);
 
 const MatchingLanguageContext = createContext(null);
 
 function readStoredLanguage() {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "he" || stored === "en") return stored;
+    if (SUPPORTED_LANGUAGES.has(stored)) return stored;
   } catch {
     // Ignore storage access errors (private mode, etc.)
   }
@@ -25,6 +26,7 @@ export function MatchingLanguageProvider({ children }) {
   const [language, setLanguageState] = useState(readStoredLanguage);
 
   const setLanguage = useCallback((next) => {
+    if (!SUPPORTED_LANGUAGES.has(next)) return;
     setLanguageState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
@@ -34,7 +36,7 @@ export function MatchingLanguageProvider({ children }) {
   }, []);
 
   const value = useMemo(() => {
-    const dir = language === "he" ? "rtl" : "ltr";
+    const dir = language === "he" || language === "ar" ? "rtl" : "ltr";
     const t = translations[language] || translations.en;
     return { language, setLanguage, dir, t };
   }, [language, setLanguage]);
