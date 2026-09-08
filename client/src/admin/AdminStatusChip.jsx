@@ -1,13 +1,15 @@
 import React from "react";
 import { Chip } from "@mui/material";
-import { getAdminStatusColors, getAdminStatusLabel } from "./adminConstants";
+import { getAdminStatusColors } from "./adminConstants";
+import { getAdminUiStatusLabel, useAdminLanguage } from "./translations";
 
 function AdminStatusChip({ status }) {
+  const { t } = useAdminLanguage();
   const colors = getAdminStatusColors(status);
 
   return (
     <Chip
-      label={getAdminStatusLabel(status)}
+      label={getAdminUiStatusLabel(status, t)}
       size="small"
       sx={{
         fontWeight: 600,

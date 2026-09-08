@@ -1,34 +1,47 @@
 /**
  * Small Admin-local date formatters (browser Intl — no extra dependency).
  * Null/invalid dates return a safe placeholder, never "Invalid Date".
+ * Locale map aligns with matching/utils (en-GB / he-IL / ar).
  */
 
-const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const LOCALE_MAP = {
+  en: "en-GB",
+  he: "he-IL",
+  ar: "ar",
+};
 
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
+function getLocale(language = "en") {
+  return LOCALE_MAP[language] || LOCALE_MAP.en;
+}
 
-const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-const longDateFormatter = new Intl.DateTimeFormat("en-GB", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+function createFormatters(language = "en") {
+  const locale = getLocale(language);
+  return {
+    dateTime: new Intl.DateTimeFormat(locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    date: new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    time: new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    longDate: new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
+}
 
 function toValidDate(value) {
   if (value == null || value === "") return null;
@@ -37,43 +50,45 @@ function toValidDate(value) {
   return date;
 }
 
-export function formatAdminDate(value) {
+export function formatAdminDate(value, language = "en") {
   const date = toValidDate(value);
   if (!date) return "—";
-  return dateFormatter.format(date);
+  return createFormatters(language).date.format(date);
 }
 
-export function formatAdminDateTime(value) {
+export function formatAdminDateTime(value, language = "en") {
   const date = toValidDate(value);
   if (!date) return "—";
-  return dateTimeFormatter.format(date);
+  return createFormatters(language).dateTime.format(date);
 }
 
-export function formatAdminTimeRange(start, end) {
+export function formatAdminTimeRange(start, end, language = "en") {
   const startDate = toValidDate(start);
   if (!startDate) return "—";
-  const datePart = dateFormatter.format(startDate);
-  const startTime = timeFormatter.format(startDate);
+  const formatters = createFormatters(language);
+  const datePart = formatters.date.format(startDate);
+  const startTime = formatters.time.format(startDate);
   const endDate = toValidDate(end);
   if (!endDate) return `${datePart} · ${startTime}`;
-  return `${datePart} · ${startTime} – ${timeFormatter.format(endDate)}`;
+  return `${datePart} · ${startTime} – ${formatters.time.format(endDate)}`;
 }
 
 /** Long weekday date for Meeting Details, e.g. "Wednesday, 2 September 2026". */
-export function formatAdminLongDate(value) {
+export function formatAdminLongDate(value, language = "en") {
   const date = toValidDate(value);
   if (!date) return "—";
-  return longDateFormatter.format(date);
+  return createFormatters(language).longDate.format(date);
 }
 
 /** Clock range only, e.g. "10:00 – 11:00" (no date part). */
-export function formatAdminClockRange(start, end) {
+export function formatAdminClockRange(start, end, language = "en") {
   const startDate = toValidDate(start);
   if (!startDate) return "—";
-  const startTime = timeFormatter.format(startDate);
+  const formatters = createFormatters(language);
+  const startTime = formatters.time.format(startDate);
   const endDate = toValidDate(end);
   if (!endDate) return startTime;
-  return `${startTime} – ${timeFormatter.format(endDate)}`;
+  return `${startTime} – ${formatters.time.format(endDate)}`;
 }
 
 /**

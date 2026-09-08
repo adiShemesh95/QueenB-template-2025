@@ -16,6 +16,7 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import { getAdminUsers } from "./adminService";
 import { formatAdminDate } from "./adminFormat";
+import { useAdminLanguage } from "./translations";
 
 const paperSx = {
   borderRadius: 3,
@@ -33,6 +34,7 @@ const paperSx = {
  * will be added with the lifecycle stage.
  */
 function AdminUsersPage() {
+  const { language, dir, t } = useAdminLanguage();
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ function AdminUsersPage() {
     : users;
 
   return (
-    <Box>
+    <Box dir={dir} lang={language}>
       <Typography
         component="h1"
         sx={{
@@ -87,11 +89,10 @@ function AdminUsersPage() {
           mb: 0.75,
         }}
       >
-        Users
+        {t.usersTitle}
       </Typography>
       <Typography sx={{ color: "#4A5568", mb: 3, maxWidth: 640, lineHeight: 1.55 }}>
-        Registered accounts with mentoring matching counts (provisional —
-        not completed-meeting totals yet).
+        {t.usersSubtitle}
       </Typography>
 
       {loading && (
@@ -105,13 +106,13 @@ function AdminUsersPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading users…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingUsers}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Could not load users. Please try again.
+          {t.loadUsersError}
         </Alert>
       )}
 
@@ -127,10 +128,10 @@ function AdminUsersPage() {
           }}
         >
           <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
-            No users found
+            {t.noUsersFound}
           </Typography>
           <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
-            There are no registered users to display yet.
+            {t.noUsersBody}
           </Typography>
         </Box>
       )}
@@ -139,11 +140,11 @@ function AdminUsersPage() {
         <>
           <TextField
             size="small"
-            label="Search users"
-            placeholder="Search by username or email"
+            label={t.searchUsers}
+            placeholder={t.searchUsersPlaceholder}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            inputProps={{ "aria-label": "Search users" }}
+            inputProps={{ "aria-label": t.searchUsersAria }}
             sx={{ mb: 3, maxWidth: 420, width: "100%" }}
           />
 
@@ -159,25 +160,25 @@ function AdminUsersPage() {
               }}
             >
               <Typography sx={{ fontWeight: 600, color: "#07142D" }}>
-                No users found
+                {t.noUsersFound}
               </Typography>
             </Box>
           ) : (
             <TableContainer sx={paperSx}>
-              <Table aria-label="Admin users" size="small">
+              <Table aria-label={t.usersTableAria} size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t.colUsername}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t.colEmail}</TableCell>
                     <TableCell sx={{ fontWeight: 700 }} align="right">
-                      Mentoring matchings
+                      {t.colMentoringMatchings}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700 }} align="right">
-                      Mentee matchings
+                      {t.colMenteeMatchings}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Registered</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t.colRegistered}</TableCell>
                     <TableCell sx={{ fontWeight: 700 }} align="right">
-                      Actions
+                      {t.colActions}
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -192,7 +193,7 @@ function AdminUsersPage() {
                       <TableCell align="right">
                         {user.matchingCountAsMentee}
                       </TableCell>
-                      <TableCell>{formatAdminDate(user.createdAt)}</TableCell>
+                      <TableCell>{formatAdminDate(user.createdAt, language)}</TableCell>
                       <TableCell align="right">
                         <Button
                           component={RouterLink}
@@ -204,7 +205,7 @@ function AdminUsersPage() {
                             color: "#F75F8A",
                           }}
                         >
-                          View details
+                          {t.viewDetails}
                         </Button>
                       </TableCell>
                     </TableRow>

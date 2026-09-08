@@ -3,6 +3,13 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminRoute from "./AdminRoute";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
+
+function renderAdminRoute(ui) {
+  return render(
+    <MatchingLanguageProvider>{ui}</MatchingLanguageProvider>
+  );
+}
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
@@ -43,7 +50,7 @@ describe("AdminRoute", () => {
 
   test("shows loading state and does not redirect while auth is loading", () => {
     mockUseAuth.mockReturnValue({ user: null, loading: true });
-    render(
+    renderAdminRoute(
       <AdminRoute>
         <div>Admin content</div>
       </AdminRoute>
@@ -55,7 +62,7 @@ describe("AdminRoute", () => {
 
   test("unauthenticated /admin preserves Admin intent on login redirect", () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false });
-    render(
+    renderAdminRoute(
       <AdminRoute>
         <div>Admin content</div>
       </AdminRoute>
@@ -72,7 +79,7 @@ describe("AdminRoute", () => {
       loading: false,
       logout: mockLogout,
     });
-    render(
+    renderAdminRoute(
       <AdminRoute>
         <div>Admin content</div>
       </AdminRoute>
@@ -92,7 +99,7 @@ describe("AdminRoute", () => {
       user: { id: 1, username: "admin", isAdmin: true },
       loading: false,
     });
-    render(
+    renderAdminRoute(
       <AdminRoute>
         <div>Admin content</div>
       </AdminRoute>
@@ -107,7 +114,7 @@ describe("AdminRoute", () => {
       loading: false,
       logout: mockLogout,
     });
-    render(
+    renderAdminRoute(
       <AdminRoute>
         <div>Admin content</div>
       </AdminRoute>

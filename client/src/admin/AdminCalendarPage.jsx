@@ -19,7 +19,6 @@ import { getAdminMatchings } from "./adminService";
 import {
   ADMIN_CALENDAR_LEGEND_STATUSES,
   getAdminStatusColors,
-  getAdminStatusLabel,
   toAdminCalendarEvents,
 } from "./adminConstants";
 import AdminStatusChip from "./AdminStatusChip";
@@ -28,9 +27,7 @@ import {
   formatAdminDuration,
   formatAdminLongDate,
 } from "./adminFormat";
-
-// Reference-style week headers (Sunday-first).
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { getAdminUiStatusLabel, useAdminLanguage } from "./translations";
 
 const paperSx = {
   borderRadius: 3,
@@ -42,10 +39,11 @@ const paperSx = {
 /** Compact calendar day cells — avoid tall stretched cards. */
 const DAY_CELL_MIN_HEIGHT = { xs: 64, sm: 72, md: 76 };
 
-const monthTitleFormatter = new Intl.DateTimeFormat("en-GB", {
-  month: "long",
-  year: "numeric",
-});
+const MONTH_LOCALES = {
+  en: "en-GB",
+  he: "he-IL",
+  ar: "ar",
+};
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -103,14 +101,14 @@ function buildMonthCells(monthDate) {
   return cells;
 }
 
-function StatusLegend() {
+function StatusLegend({ t }) {
   return (
     <Stack
       direction="row"
       spacing={2}
       flexWrap="wrap"
       useFlexGap
-      aria-label="Status color legend"
+      aria-label={t.statusLegendAria}
       sx={{ mb: 2 }}
     >
       {ADMIN_CALENDAR_LEGEND_STATUSES.map((status) => {
@@ -137,7 +135,7 @@ function StatusLegend() {
                 flexShrink: 0,
               }}
             />
-            {getAdminStatusLabel(status)}
+            {getAdminUiStatusLabel(status, t)}
           </Box>
         );
       })}
@@ -145,7 +143,7 @@ function StatusLegend() {
   );
 }
 
-function MeetingDetailsEmpty() {
+function MeetingDetailsEmpty({ t }) {
   return (
     <Box
       sx={{
@@ -165,7 +163,7 @@ function MeetingDetailsEmpty() {
           mb: 3,
         }}
       >
-        Meeting Details
+        {t.meetingDetailsTitle}
       </Typography>
       <Box
         sx={{
@@ -196,10 +194,10 @@ function MeetingDetailsEmpty() {
           <CalendarMonthOutlinedIcon sx={{ fontSize: 30 }} />
         </Box>
         <Typography sx={{ fontWeight: 700, color: "#07142D", mb: 0.75 }}>
-          No meeting selected
+          {t.noMeetingSelected}
         </Typography>
         <Typography sx={{ color: "#6B7280", fontSize: "0.9rem", maxWidth: 220, lineHeight: 1.5 }}>
-          Click on a meeting in the calendar to view its details.
+          {t.noMeetingSelectedHint}
         </Typography>
       </Box>
     </Box>
@@ -211,9 +209,9 @@ function MeetingDetailsEmpty() {
  * Uses the Admin matchings report row already in memory — no extra detail fetch.
  * "View full details" reuses /admin/matchings/:id instead of duplicating that page.
  */
-function MeetingDetailsContent({ event, onClose }) {
+function MeetingDetailsContent({ event, onClose, t, language, dir }) {
   const duration = formatAdminDuration(event.start, event.end);
-  const timeLabel = formatAdminClockRange(event.start, event.end);
+  const timeLabel = formatAdminClockRange(event.start, event.end, language);
 
   return (
     <Box
@@ -239,10 +237,10 @@ function MeetingDetailsContent({ event, onClose }) {
             letterSpacing: "-0.02em",
           }}
         >
-          Meeting Details
+          {t.meetingDetailsTitle}
         </Typography>
         <IconButton
-          aria-label="Close meeting details"
+          aria-label={t.closeMeetingDetailsAria}
           onClick={onClose}
           size="small"
           sx={{ color: "#4A5568" }}
@@ -270,11 +268,11 @@ function MeetingDetailsContent({ event, onClose }) {
       <Divider sx={{ mb: 2, borderColor: "rgba(7, 20, 45, 0.08)" }} />
 
       <Stack spacing={2} sx={{ flex: 1, mb: 2.5 }}>
-        <DetailBlock label="Date">
-          {formatAdminLongDate(event.start)}
+        <DetailBlock label={t.fieldDate}>
+          {formatAdminLongDate(event.start, language)}
         </DetailBlock>
 
-        <DetailBlock label="Time">
+        <DetailBlock label={t.fieldTime}>
           {timeLabel}
           {duration ? (
             <Typography
@@ -286,22 +284,22 @@ function MeetingDetailsContent({ event, onClose }) {
           ) : null}
         </DetailBlock>
 
-        <DetailBlock label="Mentor">
-          <Box>{event.mentor?.username || "—"}</Box>
+        <DetailBlock label={t.colMentor}>
+          <Box>{event.mentor?.username || t.emDash}</Box>
           <Typography sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            {event.mentor?.email || "—"}
+            {event.mentor?.email || t.emDash}
           </Typography>
         </DetailBlock>
 
-        <DetailBlock label="Mentee">
-          <Box>{event.mentee?.username || "—"}</Box>
+        <DetailBlock label={t.colMentee}>
+          <Box>{event.mentee?.username || t.emDash}</Box>
           <Typography sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
-            {event.mentee?.email || "—"}
+            {event.mentee?.email || t.emDash}
           </Typography>
         </DetailBlock>
 
-        <DetailBlock label="Status">
-          {getAdminStatusLabel(event.status)}
+        <DetailBlock label={t.statusLabel}>
+          {getAdminUiStatusLabel(event.status, t)}
         </DetailBlock>
       </Stack>
 
@@ -310,7 +308,14 @@ function MeetingDetailsContent({ event, onClose }) {
         to={`/admin/matchings/${event.id}`}
         variant="contained"
         fullWidth
-        endIcon={<ArrowForwardRoundedIcon />}
+        endIcon={
+          <ArrowForwardRoundedIcon
+            sx={{
+              // Forward/details: point with reading flow (→ LTR, ← RTL)
+              transform: dir === "rtl" ? "scaleX(-1)" : "none",
+            }}
+          />
+        }
         sx={{
           mt: "auto",
           textTransform: "none",
@@ -325,7 +330,7 @@ function MeetingDetailsContent({ event, onClose }) {
           },
         }}
       >
-        View full details
+        {t.viewFullDetails}
       </Button>
     </Box>
   );
@@ -370,6 +375,7 @@ function DetailBlock({ label, children }) {
  *   selected_slot_id is kept, so the meeting stays on the Calendar).
  */
 function AdminCalendarPage() {
+  const { language, dir, t } = useAdminLanguage();
   const [matchings, setMatchings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -432,6 +438,15 @@ function AdminCalendarPage() {
   // Today highlight is computed from the real current date (new Date()),
   // comparing full year+month+day via toDayKey — never a hardcoded day number.
   const todayKey = toDayKey(new Date());
+
+  const monthTitleFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(MONTH_LOCALES[language] || "en-GB", {
+        month: "long",
+        year: "numeric",
+      }),
+    [language]
+  );
   const monthLabel = monthTitleFormatter.format(visibleMonth);
 
   const eventsThisMonth = useMemo(() => {
@@ -448,6 +463,8 @@ function AdminCalendarPage() {
 
   return (
     <Box
+      dir={dir}
+      lang={language}
       sx={{
         // Keep the page balanced — do not stretch edge-to-edge on wide desktops.
         maxWidth: 1120,
@@ -465,7 +482,7 @@ function AdminCalendarPage() {
           mb: 0.5,
         }}
       >
-        Calendar
+        {t.calendarTitle}
       </Typography>
       <Typography
         sx={{
@@ -476,11 +493,10 @@ function AdminCalendarPage() {
           fontSize: "0.95rem",
         }}
       >
-        View all scheduled mentoring meetings. Each meeting is displayed on its
-        selected date and time and color-coded by its current status.
+        {t.calendarSubtitle}
       </Typography>
 
-      <StatusLegend />
+      <StatusLegend t={t} />
 
       {loading && (
         <Box
@@ -493,13 +509,13 @@ function AdminCalendarPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading calendar…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingCalendar}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3, mb: 2 }}>
-          Could not load calendar meetings. Please try again.
+          {t.loadCalendarError}
         </Alert>
       )}
 
@@ -537,10 +553,14 @@ function AdminCalendarPage() {
                 alignItems="center"
                 useFlexGap
                 flexWrap="wrap"
+                // Keep chronological arrow placement: left = previous, right = next
+                // even when the page is RTL (Hebrew/Arabic).
+                dir="ltr"
+                sx={{ direction: "ltr" }}
               >
                 <IconButton
                   onClick={() => setVisibleMonth((m) => addMonths(m, -1))}
-                  aria-label="Previous month"
+                  aria-label={t.previousMonthAria}
                   size="small"
                   sx={{ color: "#4A5568" }}
                 >
@@ -560,7 +580,7 @@ function AdminCalendarPage() {
                 </Typography>
                 <IconButton
                   onClick={() => setVisibleMonth((m) => addMonths(m, 1))}
-                  aria-label="Next month"
+                  aria-label={t.nextMonthAria}
                   size="small"
                   sx={{ color: "#4A5568" }}
                 >
@@ -569,7 +589,7 @@ function AdminCalendarPage() {
               </Stack>
               <Button
                 onClick={() => setVisibleMonth(startOfMonth(new Date()))}
-                aria-label="Go to current month"
+                aria-label={t.goToCurrentMonthAria}
                 size="small"
                 sx={{
                   textTransform: "none",
@@ -581,7 +601,7 @@ function AdminCalendarPage() {
                   minWidth: 0,
                 }}
               >
-                Today
+                {t.today}
               </Button>
             </Stack>
 
@@ -593,13 +613,13 @@ function AdminCalendarPage() {
                   mb: 1,
                 }}
               >
-                No scheduled meetings this month.
+                {t.noMeetingsThisMonth}
               </Typography>
             )}
 
             <Box
               role="grid"
-              aria-label={`Calendar for ${monthLabel}`}
+              aria-label={t.calendarGridAria(monthLabel)}
               sx={{
                 width: "100%",
                 display: "grid",
@@ -612,7 +632,7 @@ function AdminCalendarPage() {
                 overflow: "hidden",
               }}
             >
-              {WEEKDAY_LABELS.map((label) => (
+              {t.weekdayLabels.map((label) => (
                 <Box
                   key={label}
                   role="columnheader"
@@ -695,10 +715,14 @@ function AdminCalendarPage() {
                     >
                       {dayEvents.map((event) => {
                         const colors = getAdminStatusColors(event.status);
-                        const statusLabel = getAdminStatusLabel(event.status);
+                        const statusLabel = getAdminUiStatusLabel(
+                          event.status,
+                          t
+                        );
                         const clock = formatAdminClockRange(
                           event.start,
-                          event.end
+                          event.end,
+                          language
                         );
                         const isSelected = selectedEvent?.id === event.id;
 
@@ -709,7 +733,11 @@ function AdminCalendarPage() {
                             type="button"
                             onClick={() => setSelectedEvent(event)}
                             title={`${event.title} · ${statusLabel} · ${clock}`}
-                            aria-label={`${event.title}, ${statusLabel}, ${clock}. Show meeting details`}
+                            aria-label={t.showMeetingDetailsAria(
+                              event.title,
+                              statusLabel,
+                              clock
+                            )}
                             aria-pressed={isSelected}
                             sx={{
                               display: "block",
@@ -777,7 +805,7 @@ function AdminCalendarPage() {
           {/* Always-visible Meeting Details column (~28–32%). */}
           <Box
             component="aside"
-            aria-label="Meeting details"
+            aria-label={t.meetingDetailsAsideAria}
             sx={{
               ...paperSx,
               minWidth: 0,
@@ -788,9 +816,12 @@ function AdminCalendarPage() {
               <MeetingDetailsContent
                 event={selectedEvent}
                 onClose={closePanel}
+                t={t}
+                language={language}
+                dir={dir}
               />
             ) : (
-              <MeetingDetailsEmpty />
+              <MeetingDetailsEmpty t={t} />
             )}
           </Box>
         </Box>

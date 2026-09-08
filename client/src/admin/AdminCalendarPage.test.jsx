@@ -4,6 +4,7 @@ import { render, screen, waitFor, within, fireEvent } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import AdminCalendarPage from "./AdminCalendarPage";
 import * as adminService from "./adminService";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
 import {
   ADMIN_CALENDAR_LEGEND_STATUSES,
   ADMIN_MATCHING_STATUSES,
@@ -115,12 +116,17 @@ describe("toAdminCalendarEvents", () => {
 describe("AdminCalendarPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
   });
 
   test("calendar grid renders even with zero scheduled meetings", async () => {
     adminService.getAdminMatchings.mockResolvedValue([unscheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("grid", { name: /calendar for/i })
@@ -138,7 +144,11 @@ describe("AdminCalendarPage", () => {
   test("empty data does not replace or hide the calendar", async () => {
     adminService.getAdminMatchings.mockResolvedValue([]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     const grid = await screen.findByRole("grid", { name: /calendar for/i });
     expect(grid).toBeInTheDocument();
@@ -153,7 +163,11 @@ describe("AdminCalendarPage", () => {
   test("Meeting Details panel is always visible with empty state", async () => {
     adminService.getAdminMatchings.mockResolvedValue([]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("heading", { name: /meeting details/i })
@@ -171,7 +185,11 @@ describe("AdminCalendarPage", () => {
       scheduledMatching,
     ]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -184,7 +202,11 @@ describe("AdminCalendarPage", () => {
   test("event shows mentor ↔ mentee, time range, and status", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     const eventButton = await screen.findByRole("button", {
       name: /mentorA ↔ menteeC/i,
@@ -228,7 +250,11 @@ describe("AdminCalendarPage", () => {
       cancelledMatching,
     ]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     const cancelledButton = await screen.findByRole("button", {
       name: /menteeZ, Cancelled/i,
@@ -249,7 +275,11 @@ describe("AdminCalendarPage", () => {
   test("clicking event opens Meeting Details panel without navigating away", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText(/no meeting selected/i)).toBeInTheDocument();
 
@@ -272,7 +302,11 @@ describe("AdminCalendarPage", () => {
   test("panel shows mentor, mentee, date, time, and status", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     await userEvent.click(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -315,7 +349,11 @@ describe("AdminCalendarPage", () => {
   test("close button returns panel to empty state without hiding it", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     await userEvent.click(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -338,7 +376,11 @@ describe("AdminCalendarPage", () => {
   test("View full details navigates to /admin/matchings/:id", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     await userEvent.click(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -350,11 +392,37 @@ describe("AdminCalendarPage", () => {
     expect(detailsLink).toHaveAttribute("href", "/admin/matchings/43");
   });
 
+  test("View full details arrow mirrors for Arabic RTL without changing the link", async () => {
+    window.localStorage.setItem("queenb-matching-language", "ar");
+    adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminCalendarPage />
+      </MatchingLanguageProvider>
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
+    );
+
+    const detailsLink = await screen.findByRole("link", {
+      name: "عرض التفاصيل الكاملة",
+    });
+    expect(detailsLink).toHaveAttribute("href", "/admin/matchings/43");
+    const arrow = detailsLink.querySelector("svg");
+    expect(arrow).toHaveStyle({ transform: "scaleX(-1)" });
+  });
+
   test("does not fetch matching detail on event click", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
     adminService.getAdminMatchingById = jest.fn();
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     await userEvent.click(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -368,7 +436,11 @@ describe("AdminCalendarPage", () => {
   test("shows friendly error state while still keeping layout usable", async () => {
     adminService.getAdminMatchings.mockRejectedValue(new Error("network"));
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByText(/could not load calendar meetings/i)
@@ -382,7 +454,11 @@ describe("AdminCalendarPage", () => {
   test("month navigation previous, next, and today work", async () => {
     adminService.getAdminMatchings.mockResolvedValue([scheduledMatching]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByRole("button", { name: /mentorA ↔ menteeC/i });
 
     const monthHeading = screen.getByRole("heading", {
@@ -422,7 +498,11 @@ describe("AdminCalendarPage", () => {
       scheduledMatching,
     ]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
@@ -461,7 +541,11 @@ describe("AdminCalendarPage", () => {
 
     adminService.getAdminMatchings.mockResolvedValue([morning, afternoon]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("button", { name: /menteeMorning/i })
@@ -499,7 +583,11 @@ describe("AdminCalendarPage", () => {
       },
     ]);
 
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByRole("grid", { name: /calendar for/i });
 
     expect(
@@ -540,7 +628,11 @@ describe("AdminCalendarPage today highlight", () => {
   });
 
   test("highlights only the real current date (year + month + day)", async () => {
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByRole("heading", { level: 2, name: /september 2026/i })
@@ -556,7 +648,11 @@ describe("AdminCalendarPage today highlight", () => {
   });
 
   test("same day number in another month is not highlighted", async () => {
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByRole("heading", { level: 2, name: /september 2026/i });
 
     fireEvent.click(screen.getByRole("button", { name: /next month/i }));
@@ -571,7 +667,11 @@ describe("AdminCalendarPage today highlight", () => {
   });
 
   test("Today button returns to the current month with today highlighted", async () => {
-    render(<AdminCalendarPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminCalendarPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByRole("heading", { level: 2, name: /september 2026/i });
 
     fireEvent.click(screen.getByRole("button", { name: /next month/i }));
@@ -591,5 +691,33 @@ describe("AdminCalendarPage today highlight", () => {
     expect(
       screen.getByRole("gridcell", { name: /Sep 15 2026/i })
     ).toHaveAttribute("aria-current", "date");
+  });
+
+  test("month nav arrows stay chronological under Arabic RTL", async () => {
+    window.localStorage.setItem("queenb-matching-language", "ar");
+    adminService.getAdminMatchings.mockResolvedValue([]);
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminCalendarPage />
+      </MatchingLanguageProvider>
+    );
+
+    const prev = await screen.findByRole("button", { name: "الشهر السابق" });
+    const next = screen.getByRole("button", { name: "الشهر التالي" });
+    expect(prev.parentElement).toHaveAttribute("dir", "ltr");
+    expect(
+      prev.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    const initialLabel = prev.parentElement.querySelector("h2").textContent;
+    fireEvent.click(next);
+    const afterNext = prev.parentElement.querySelector("h2").textContent;
+    expect(afterNext).not.toBe(initialLabel);
+
+    fireEvent.click(prev);
+    expect(prev.parentElement.querySelector("h2").textContent).toBe(
+      initialLabel
+    );
   });
 });

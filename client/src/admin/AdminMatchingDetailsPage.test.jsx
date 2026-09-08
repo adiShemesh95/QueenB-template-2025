@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import AdminMatchingDetailsPage from "./AdminMatchingDetailsPage";
 import * as adminService from "./adminService";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
 
 jest.mock("./adminService");
 
@@ -23,6 +24,7 @@ jest.mock("react-router-dom", () => {
 describe("AdminMatchingDetailsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
   });
 
   test("renders participants, selectedSlot, proposed slots, and feedback unavailable", async () => {
@@ -72,7 +74,11 @@ describe("AdminMatchingDetailsPage", () => {
       feedback: null,
     });
 
-    render(<AdminMatchingDetailsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingDetailsPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("mentorA")).toBeInTheDocument();
     expect(screen.getByText("mentor@ex.com")).toBeInTheDocument();
@@ -110,7 +116,11 @@ describe("AdminMatchingDetailsPage", () => {
       feedback: null,
     });
 
-    render(<AdminMatchingDetailsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingDetailsPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("Reschedule used")).toBeInTheDocument();
     expect(screen.getByText("Yes")).toBeInTheDocument();
@@ -148,7 +158,11 @@ describe("AdminMatchingDetailsPage", () => {
       feedback: null,
     });
 
-    render(<AdminMatchingDetailsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingDetailsPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(
       await screen.findByText(/no meeting time selected yet/i)
@@ -159,7 +173,73 @@ describe("AdminMatchingDetailsPage", () => {
 
   test("shows not found when API returns null", async () => {
     adminService.getAdminMatchingById.mockResolvedValue(null);
-    render(<AdminMatchingDetailsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingDetailsPage />
+    </MatchingLanguageProvider>
+  );
     expect(await screen.findByText(/matching not found/i)).toBeInTheDocument();
+  });
+
+  test("Arabic UI uses polished reschedule-used wording", async () => {
+    window.localStorage.setItem("queenb-matching-language", "ar");
+    adminService.getAdminMatchingById.mockResolvedValue({
+      id: 10,
+      status: "MATCHED",
+      createdAt: "2026-02-01T09:00:00.000Z",
+      updatedAt: "2026-02-02T09:00:00.000Z",
+      moreTimesRequested: false,
+      rescheduleUsed: true,
+      mentor: { id: 1, username: "mentorA", email: "mentor@ex.com" },
+      mentee: { id: 2, username: "menteeB", email: "mentee@ex.com" },
+      mentorProfile: null,
+      selectedSlot: null,
+      slots: [],
+      feedback: null,
+    });
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminMatchingDetailsPage />
+      </MatchingLanguageProvider>
+    );
+
+    expect(
+      await screen.findByText("تم استخدام إعادة الجدولة")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("استُخدمت إعادة الجدولة")
+    ).not.toBeInTheDocument();
+  });
+
+  test("back arrow mirrors for Arabic RTL and still links to matchings list", async () => {
+    window.localStorage.setItem("queenb-matching-language", "ar");
+    adminService.getAdminMatchingById.mockResolvedValue({
+      id: 10,
+      status: "MATCHED",
+      createdAt: "2026-02-01T09:00:00.000Z",
+      updatedAt: "2026-02-02T09:00:00.000Z",
+      moreTimesRequested: false,
+      rescheduleUsed: false,
+      mentor: { id: 1, username: "mentorA", email: "mentor@ex.com" },
+      mentee: { id: 2, username: "menteeB", email: "mentee@ex.com" },
+      mentorProfile: null,
+      selectedSlot: null,
+      slots: [],
+      feedback: null,
+    });
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminMatchingDetailsPage />
+      </MatchingLanguageProvider>
+    );
+
+    const backLink = await screen.findByRole("link", {
+      name: /العودة إلى المطابقات|Back to matchings/i,
+    });
+    expect(backLink).toHaveAttribute("href", "/admin/matchings");
+    const arrow = backLink.querySelector("svg");
+    expect(arrow).toHaveStyle({ transform: "scaleX(-1)" });
   });
 });

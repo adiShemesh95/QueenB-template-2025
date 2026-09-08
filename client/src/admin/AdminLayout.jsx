@@ -12,6 +12,8 @@ import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-rout
 import { useAuth } from "../context/AuthContext";
 import Logo from "../components/Logo";
 import BootcampFooter from "../components/BootcampFooter";
+import LanguageSelector from "../components/home/LanguageSelector";
+import { useAdminLanguage } from "./translations";
 
 const pageBackground = `
   radial-gradient(ellipse 80% 55% at 0% 0%, rgba(141, 216, 247, 0.35) 0%, transparent 55%),
@@ -19,12 +21,6 @@ const pageBackground = `
   radial-gradient(ellipse 60% 45% at 85% 100%, rgba(230, 214, 255, 0.3) 0%, transparent 45%),
   linear-gradient(160deg, #EAF7FD 0%, #F9FBFF 42%, #FDF2F6 100%)
 `;
-
-const navItems = [
-  { to: "/admin/calendar", label: "Calendar" },
-  { to: "/admin/users", label: "Users" },
-  { to: "/admin/matchings", label: "Matchings" },
-];
 
 // Admin Alerts are intentionally omitted — owned by another teammate.
 
@@ -70,10 +66,17 @@ function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { language, setLanguage, dir, t } = useAdminLanguage();
   const [loggingOut, setLoggingOut] = React.useState(false);
 
   const username = user?.username || "";
   const initials = getUsernameInitials(username);
+
+  const navItems = [
+    { to: "/admin/calendar", label: t.navCalendar },
+    { to: "/admin/users", label: t.navUsers },
+    { to: "/admin/matchings", label: t.navMatchings },
+  ];
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -139,7 +142,7 @@ function AdminLayout() {
             <Logo disableLink />
             <Typography
               component="span"
-              aria-label="Admin mode"
+              aria-label={t.adminModeAria}
               sx={{
                 fontWeight: 700,
                 fontSize: "0.65rem",
@@ -153,7 +156,7 @@ function AdminLayout() {
                 flexShrink: 0,
               }}
             >
-              Admin
+              {t.adminBadge}
             </Typography>
           </Box>
 
@@ -169,7 +172,7 @@ function AdminLayout() {
           >
             <Box
               component="nav"
-              aria-label="Admin"
+              aria-label={t.adminNavAria}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -258,14 +261,22 @@ function AdminLayout() {
                 },
               }}
             >
-              {loggingOut ? "Logging out..." : "Logout"}
+              {loggingOut ? t.loggingOut : t.logout}
             </Button>
+
+            <LanguageSelector
+              language={language}
+              onLanguageChange={setLanguage}
+              ariaLabel={t.languageAria}
+            />
           </Box>
         </Toolbar>
       </AppBar>
 
       <Box
         component="main"
+        dir={dir}
+        lang={language}
         sx={{
           flex: 1,
           py: { xs: 3, sm: 4 },

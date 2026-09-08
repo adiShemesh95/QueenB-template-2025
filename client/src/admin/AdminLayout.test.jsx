@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminLayout from "./AdminLayout";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
 
 const mockLogout = jest.fn();
 const mockNavigate = jest.fn();
@@ -51,6 +52,14 @@ jest.mock("react-router-dom", () => {
   };
 });
 
+function renderAdminLayout() {
+  return render(
+    <MatchingLanguageProvider>
+      <AdminLayout />
+    </MatchingLanguageProvider>
+  );
+}
+
 describe("AdminLayout", () => {
   beforeEach(() => {
     mockLogout.mockReset();
@@ -59,7 +68,7 @@ describe("AdminLayout", () => {
   });
 
   test("Admin logout navigates to Sign In with Admin intent", async () => {
-    render(<AdminLayout />);
+    renderAdminLayout();
 
     await userEvent.click(screen.getByRole("button", { name: /^logout$/i }));
 
@@ -73,7 +82,7 @@ describe("AdminLayout", () => {
   });
 
   test("Admin logo is rendered as display-only (no dashboard link)", () => {
-    render(<AdminLayout />);
+    renderAdminLayout();
 
     expect(screen.getByTestId("admin-logo")).toHaveAttribute(
       "data-disable-link",
@@ -85,12 +94,12 @@ describe("AdminLayout", () => {
   });
 
   test("BootcampFooter remains in the Admin shell", () => {
-    render(<AdminLayout />);
+    renderAdminLayout();
     expect(screen.getByTestId("bootcamp-footer")).toBeInTheDocument();
   });
 
   test("Admin navigation no longer includes Overview", () => {
-    render(<AdminLayout />);
+    renderAdminLayout();
 
     expect(
       screen.queryByRole("link", { name: /^overview$/i })
@@ -98,7 +107,7 @@ describe("AdminLayout", () => {
   });
 
   test("Admin navigation order is Calendar, Users, Matchings", () => {
-    render(<AdminLayout />);
+    renderAdminLayout();
 
     const nav = screen.getByRole("navigation", { name: /^admin$/i });
     const links = Array.from(nav.querySelectorAll("a")).map((link) =>

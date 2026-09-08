@@ -16,6 +16,7 @@ import {
   formatAdminDateTime,
   formatAdminTimeRange,
 } from "./adminFormat";
+import { useAdminLanguage } from "./translations";
 
 const sectionSx = {
   p: { xs: 2.5, sm: 3 },
@@ -48,9 +49,9 @@ function Field({ label, children }) {
   );
 }
 
-function ChipList({ items }) {
+function ChipList({ items, emptyLabel }) {
   if (!items || items.length === 0) {
-    return <Typography sx={{ color: "#6B7280" }}>—</Typography>;
+    return <Typography sx={{ color: "#6B7280" }}>{emptyLabel}</Typography>;
   }
   return (
     <Stack direction="row" flexWrap="wrap" gap={0.75}>
@@ -85,6 +86,7 @@ function ChipList({ items }) {
  */
 function AdminMatchingDetailsPage() {
   const { id } = useParams();
+  const { language, dir, t } = useAdminLanguage();
   const [matching, setMatching] = useState(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -120,11 +122,18 @@ function AdminMatchingDetailsPage() {
   const slots = matching?.slots ?? [];
 
   return (
-    <Box>
+    <Box dir={dir} lang={language}>
       <Button
         component={RouterLink}
         to="/admin/matchings"
-        startIcon={<ArrowBackRoundedIcon />}
+        startIcon={
+          <ArrowBackRoundedIcon
+            sx={{
+              // Back action: point opposite reading flow (← LTR, → RTL)
+              transform: dir === "rtl" ? "scaleX(-1)" : "none",
+            }}
+          />
+        }
         sx={{
           mb: 2,
           px: 0,
@@ -136,7 +145,7 @@ function AdminMatchingDetailsPage() {
           },
         }}
       >
-        Back to matchings
+        {t.backToMatchings}
       </Button>
 
       <Typography
@@ -149,7 +158,7 @@ function AdminMatchingDetailsPage() {
           mb: 3,
         }}
       >
-        Matching details
+        {t.matchingDetailsTitle}
       </Typography>
 
       {loading && (
@@ -163,19 +172,19 @@ function AdminMatchingDetailsPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading matching…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingMatching}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Could not load this matching. Please try again.
+          {t.loadMatchingError}
         </Alert>
       )}
 
       {!loading && !error && matching === null && (
         <Alert severity="info" sx={{ borderRadius: 3 }}>
-          Matching not found.
+          {t.matchingNotFound}
         </Alert>
       )}
 
@@ -186,7 +195,7 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Matching
+              {t.sectionMatching}
             </Typography>
             <Box
               component="dl"
@@ -197,21 +206,21 @@ function AdminMatchingDetailsPage() {
                 m: 0,
               }}
             >
-              <Field label="ID">{matching.id}</Field>
-              <Field label="Status">
+              <Field label={t.fieldId}>{matching.id}</Field>
+              <Field label={t.statusLabel}>
                 <AdminStatusChip status={matching.status} />
               </Field>
-              <Field label="Created">
-                {formatAdminDateTime(matching.createdAt)}
+              <Field label={t.colCreated}>
+                {formatAdminDateTime(matching.createdAt, language)}
               </Field>
-              <Field label="Updated">
-                {formatAdminDateTime(matching.updatedAt)}
+              <Field label={t.fieldUpdated}>
+                {formatAdminDateTime(matching.updatedAt, language)}
               </Field>
-              <Field label="More times requested">
-                {matching.moreTimesRequested ? "Yes" : "No"}
+              <Field label={t.fieldMoreTimesRequested}>
+                {matching.moreTimesRequested ? t.yes : t.no}
               </Field>
-              <Field label="Reschedule used">
-                {matching.rescheduleUsed ? "Yes" : "No"}
+              <Field label={t.fieldRescheduleUsed}>
+                {matching.rescheduleUsed ? t.yes : t.no}
               </Field>
             </Box>
           </Box>
@@ -221,7 +230,7 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Mentor
+              {t.sectionMentor}
             </Typography>
             <Box
               component="dl"
@@ -232,20 +241,22 @@ function AdminMatchingDetailsPage() {
                 m: 0,
               }}
             >
-              <Field label="Username">
-                {matching.mentor?.username || "—"}
+              <Field label={t.fieldUsername}>
+                {matching.mentor?.username || t.emDash}
               </Field>
-              <Field label="Email">{matching.mentor?.email || "—"}</Field>
+              <Field label={t.fieldEmail}>
+                {matching.mentor?.email || t.emDash}
+              </Field>
             </Box>
 
             <Typography
               component="h3"
               sx={{ fontWeight: 700, color: "#07142D", mt: 2, mb: 1.5 }}
             >
-              Mentor profile
+              {t.sectionMentorProfile}
             </Typography>
             {!mentorProfile ? (
-              <Typography sx={{ color: "#6B7280" }}>No mentor profile</Typography>
+              <Typography sx={{ color: "#6B7280" }}>{t.noMentorProfile}</Typography>
             ) : (
               <Box
                 component="dl"
@@ -256,19 +267,24 @@ function AdminMatchingDetailsPage() {
                   m: 0,
                 }}
               >
-                <Field label="Job">{mentorProfile.job || "—"}</Field>
-                <Field label="Company">{mentorProfile.company || "—"}</Field>
-                <Field label="Years experience">
-                  {mentorProfile.yearsExperience ?? "—"}
+                <Field label={t.fieldJob}>{mentorProfile.job || t.emDash}</Field>
+                <Field label={t.fieldCompany}>
+                  {mentorProfile.company || t.emDash}
+                </Field>
+                <Field label={t.fieldYearsExperience}>
+                  {mentorProfile.yearsExperience ?? t.emDash}
                 </Field>
                 <Box sx={{ gridColumn: "1 / -1" }}>
-                  <Field label="Topics">
-                    <ChipList items={mentorProfile.topics} />
+                  <Field label={t.fieldTopics}>
+                    <ChipList items={mentorProfile.topics} emptyLabel={t.emDash} />
                   </Field>
                 </Box>
                 <Box sx={{ gridColumn: "1 / -1" }}>
-                  <Field label="Tech stack">
-                    <ChipList items={mentorProfile.techStack} />
+                  <Field label={t.fieldTechStack}>
+                    <ChipList
+                      items={mentorProfile.techStack}
+                      emptyLabel={t.emDash}
+                    />
                   </Field>
                 </Box>
               </Box>
@@ -280,7 +296,7 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Mentee
+              {t.sectionMentee}
             </Typography>
             <Box
               component="dl"
@@ -291,10 +307,12 @@ function AdminMatchingDetailsPage() {
                 m: 0,
               }}
             >
-              <Field label="Username">
-                {matching.mentee?.username || "—"}
+              <Field label={t.fieldUsername}>
+                {matching.mentee?.username || t.emDash}
               </Field>
-              <Field label="Email">{matching.mentee?.email || "—"}</Field>
+              <Field label={t.fieldEmail}>
+                {matching.mentee?.email || t.emDash}
+              </Field>
             </Box>
           </Box>
 
@@ -303,15 +321,19 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Selected meeting time
+              {t.sectionSelectedMeetingTime}
             </Typography>
             {!selectedSlot ? (
               <Typography sx={{ color: "#6B7280" }}>
-                No meeting time selected yet
+                {t.noMeetingTimeSelected}
               </Typography>
             ) : (
               <Typography sx={{ color: "#07142D", fontWeight: 600 }}>
-                {formatAdminTimeRange(selectedSlot.start, selectedSlot.end)}
+                {formatAdminTimeRange(
+                  selectedSlot.start,
+                  selectedSlot.end,
+                  language
+                )}
               </Typography>
             )}
           </Box>
@@ -321,15 +343,14 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 1 }}
             >
-              Proposed slots
+              {t.sectionProposedSlots}
             </Typography>
             <Typography sx={{ color: "#6B7280", fontSize: "0.9rem", mb: 2 }}>
-              All times proposed during scheduling. The selected slot is marked
-              when applicable.
+              {t.proposedSlotsHint}
             </Typography>
             {slots.length === 0 ? (
               <Typography sx={{ color: "#6B7280" }}>
-                No proposed slots yet.
+                {t.noProposedSlots}
               </Typography>
             ) : (
               <Stack spacing={1}>
@@ -357,11 +378,11 @@ function AdminMatchingDetailsPage() {
                       }}
                     >
                       <Typography sx={{ fontWeight: isSelected ? 700 : 500 }}>
-                        {formatAdminTimeRange(slot.start, slot.end)}
+                        {formatAdminTimeRange(slot.start, slot.end, language)}
                       </Typography>
                       {isSelected && (
                         <Chip
-                          label="Selected"
+                          label={t.selectedChip}
                           size="small"
                           sx={{
                             fontWeight: 700,
@@ -382,11 +403,11 @@ function AdminMatchingDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 1 }}
             >
-              Feedback
+              {t.sectionFeedback}
             </Typography>
             {/* Stage 4 returns feedback: null — feature does not exist yet. */}
             <Typography sx={{ color: "#6B7280" }}>
-              Feedback is not available yet.
+              {t.feedbackUnavailable}
             </Typography>
           </Box>
         </Stack>

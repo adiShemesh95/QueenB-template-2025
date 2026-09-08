@@ -22,11 +22,12 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import { getAdminMatchings, getAdminUsers } from "./adminService";
 import {
+  ADMIN_MATCHING_STATUSES,
   ADMIN_STATUS_FILTER_ALL,
-  ADMIN_STATUS_FILTER_OPTIONS,
 } from "./adminConstants";
 import AdminStatusChip from "./AdminStatusChip";
 import { formatAdminDateTime, formatAdminTimeRange } from "./adminFormat";
+import { getAdminUiStatusLabel, useAdminLanguage } from "./translations";
 
 const paperSx = {
   borderRadius: 3,
@@ -41,6 +42,7 @@ const paperSx = {
  * Status options are only the four current production values.
  */
 function AdminMatchingsPage() {
+  const { language, dir, t } = useAdminLanguage();
   const [matchings, setMatchings] = useState([]);
   const [users, setUsers] = useState([]);
   const [statusFilter, setStatusFilter] = useState(ADMIN_STATUS_FILTER_ALL);
@@ -48,6 +50,17 @@ function AdminMatchingsPage() {
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: ADMIN_STATUS_FILTER_ALL, label: t.statusFilterAll },
+      ...ADMIN_MATCHING_STATUSES.map((status) => ({
+        value: status,
+        label: getAdminUiStatusLabel(status, t),
+      })),
+    ],
+    [t]
+  );
 
   const filters = useMemo(() => {
     const next = {};
@@ -110,7 +123,7 @@ function AdminMatchingsPage() {
   };
 
   return (
-    <Box>
+    <Box dir={dir} lang={language}>
       <Typography
         component="h1"
         sx={{
@@ -121,11 +134,10 @@ function AdminMatchingsPage() {
           mb: 0.75,
         }}
       >
-        Matchings
+        {t.matchingsTitle}
       </Typography>
       <Typography sx={{ color: "#4A5568", mb: 3, maxWidth: 640, lineHeight: 1.55 }}>
-        Matching report for current production statuses. Filters are applied by
-        the Admin backend.
+        {t.matchingsSubtitle}
       </Typography>
 
       <Stack
@@ -135,15 +147,15 @@ function AdminMatchingsPage() {
         alignItems={{ xs: "stretch", md: "flex-end" }}
       >
         <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 240 } }}>
-          <InputLabel id="admin-status-filter-label">Status</InputLabel>
+          <InputLabel id="admin-status-filter-label">{t.statusLabel}</InputLabel>
           <Select
             labelId="admin-status-filter-label"
             id="admin-status-filter"
-            label="Status"
+            label={t.statusLabel}
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            {ADMIN_STATUS_FILTER_OPTIONS.map((option) => (
+            {statusFilterOptions.map((option) => (
               <MenuItem key={option.value || "all"} value={option.value}>
                 {option.label}
               </MenuItem>
@@ -167,8 +179,8 @@ function AdminMatchingsPage() {
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Participant"
-              placeholder="Filter by mentor or mentee"
+              label={t.participantLabel}
+              placeholder={t.participantPlaceholder}
             />
           )}
         />
@@ -183,7 +195,7 @@ function AdminMatchingsPage() {
             alignSelf: { xs: "stretch", md: "center" },
           }}
         >
-          Reset filters
+          {t.resetFilters}
         </Button>
       </Stack>
 
@@ -198,13 +210,13 @@ function AdminMatchingsPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading matchings…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingMatchings}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Could not load matchings. Please try again.
+          {t.loadMatchingsError}
         </Alert>
       )}
 
@@ -220,31 +232,29 @@ function AdminMatchingsPage() {
           }}
         >
           <Typography sx={{ fontWeight: 600, color: "#07142D", mb: 0.5 }}>
-            {hasActiveFilters
-              ? "No matchings found for the selected filters."
-              : "No matchings found"}
+            {hasActiveFilters ? t.noMatchingsFiltered : t.noMatchingsFound}
           </Typography>
           <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
-            {hasActiveFilters
-              ? "Try a different status or participant, or reset the filters."
-              : "There are no matching records to display yet."}
+            {hasActiveFilters ? t.noMatchingsFilteredBody : t.noMatchingsBody}
           </Typography>
         </Box>
       )}
 
       {!loading && !error && matchings.length > 0 && (
         <TableContainer sx={paperSx}>
-          <Table aria-label="Admin matchings" size="small">
+          <Table aria-label={t.matchingsTableAria} size="small">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Mentor</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Mentee</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Selected meeting time</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Created</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{t.colId}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{t.colMentor}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{t.colMentee}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{t.colStatus}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>
+                  {t.colSelectedMeetingTime}
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{t.colCreated}</TableCell>
                 <TableCell sx={{ fontWeight: 700 }} align="right">
-                  Actions
+                  {t.colActions}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -253,10 +263,10 @@ function AdminMatchingsPage() {
                 <TableRow key={matching.id} hover>
                   <TableCell>{matching.id}</TableCell>
                   <TableCell>
-                    {matching.mentor?.username || "—"}
+                    {matching.mentor?.username || t.emDash}
                   </TableCell>
                   <TableCell>
-                    {matching.mentee?.username || "—"}
+                    {matching.mentee?.username || t.emDash}
                   </TableCell>
                   <TableCell>
                     <AdminStatusChip status={matching.status} />
@@ -265,12 +275,13 @@ function AdminMatchingsPage() {
                     {matching.selectedSlot
                       ? formatAdminTimeRange(
                           matching.selectedSlot.start,
-                          matching.selectedSlot.end
+                          matching.selectedSlot.end,
+                          language
                         )
-                      : "—"}
+                      : t.emDash}
                   </TableCell>
                   <TableCell>
-                    {formatAdminDateTime(matching.createdAt)}
+                    {formatAdminDateTime(matching.createdAt, language)}
                   </TableCell>
                   <TableCell align="right">
                     <Button
@@ -283,7 +294,7 @@ function AdminMatchingsPage() {
                         color: "#F75F8A",
                       }}
                     >
-                      View details
+                      {t.viewDetails}
                     </Button>
                   </TableCell>
                 </TableRow>

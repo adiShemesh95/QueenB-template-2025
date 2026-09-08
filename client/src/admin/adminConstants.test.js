@@ -20,6 +20,16 @@ describe("adminFormat", () => {
     expect(formatAdminTimeRange("not-a-date", null)).toBe("—");
     expect(formatAdminDateTime("Invalid Date")).toBe("—");
   });
+
+  test("formats Arabic dates with the ar locale (not English month names)", () => {
+    const iso = new Date(2026, 8, 8, 14, 47).toISOString();
+    const arabic = formatAdminDateTime(iso, "ar");
+    const english = formatAdminDateTime(iso, "en");
+
+    expect(english).toMatch(/Sep/);
+    expect(arabic).not.toMatch(/\bSep\b/);
+    expect(arabic).toMatch(/سبتمبر/);
+  });
 });
 
 describe("adminConstants", () => {

@@ -2,6 +2,7 @@ import React from "react";
 import { Alert, Box, Button, Typography } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAdminLanguage } from "./translations";
 
 /**
  * Shown when an authenticated non-admin reaches /admin.
@@ -10,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 function AdminAccessRequired() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { language, dir, t } = useAdminLanguage();
   const [signingOut, setSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
@@ -25,6 +27,8 @@ function AdminAccessRequired() {
 
   return (
     <Box
+      dir={dir}
+      lang={language}
       sx={{
         minHeight: "70vh",
         display: "flex",
@@ -56,11 +60,10 @@ function AdminAccessRequired() {
             mb: 1.5,
           }}
         >
-          Admin access required
+          {t.accessRequiredTitle}
         </Typography>
         <Alert severity="warning" sx={{ borderRadius: 2, mb: 2.5, textAlign: "left" }}>
-          Admin access required. Your account is signed in but is not authorized
-          for the Admin area.
+          {t.accessRequiredAlert}
         </Alert>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <Button
@@ -79,7 +82,7 @@ function AdminAccessRequired() {
               },
             }}
           >
-            Continue to the app
+            {t.continueToApp}
           </Button>
           <Button
             onClick={handleSignOut}
@@ -90,7 +93,7 @@ function AdminAccessRequired() {
               color: "#4A5568",
             }}
           >
-            {signingOut ? "Signing out…" : "Sign in with a different account"}
+            {signingOut ? t.signingOut : t.signInDifferentAccount}
           </Button>
         </Box>
       </Box>

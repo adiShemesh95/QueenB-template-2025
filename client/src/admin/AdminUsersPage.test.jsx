@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminUsersPage from "./AdminUsersPage";
 import * as adminService from "./adminService";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
 
 jest.mock("./adminService");
 
@@ -49,7 +50,11 @@ describe("AdminUsersPage", () => {
   test("renders backend user data and links to user details", async () => {
     adminService.getAdminUsers.mockResolvedValue([sampleUsers[0]]);
 
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
     expect(screen.getByText("dana@example.com")).toBeInTheDocument();
@@ -63,13 +68,21 @@ describe("AdminUsersPage", () => {
 
   test("shows empty state when there are no users", async () => {
     adminService.getAdminUsers.mockResolvedValue([]);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
     expect(await screen.findByText(/no users found/i)).toBeInTheDocument();
   });
 
   test("shows error state when the request fails", async () => {
     adminService.getAdminUsers.mockRejectedValue(new Error("network"));
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
     expect(
       await screen.findByText(/could not load users/i)
     ).toBeInTheDocument();
@@ -77,7 +90,11 @@ describe("AdminUsersPage", () => {
 
   test("filters users by username", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
     expect(screen.getByText("Alex")).toBeInTheDocument();
@@ -93,7 +110,11 @@ describe("AdminUsersPage", () => {
 
   test("filters users by email", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
 
@@ -108,7 +129,11 @@ describe("AdminUsersPage", () => {
 
   test("search is case-insensitive", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
 
@@ -123,7 +148,11 @@ describe("AdminUsersPage", () => {
 
   test("trims leading and trailing spaces from the search query", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
 
@@ -138,7 +167,11 @@ describe("AdminUsersPage", () => {
 
   test("clearing search restores all users", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     const searchInput = await screen.findByRole("textbox", {
       name: /search users/i,
@@ -155,7 +188,11 @@ describe("AdminUsersPage", () => {
 
   test("shows no results state when search matches nothing", async () => {
     adminService.getAdminUsers.mockResolvedValue(sampleUsers);
-    render(<AdminUsersPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminUsersPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("dana")).toBeInTheDocument();
 

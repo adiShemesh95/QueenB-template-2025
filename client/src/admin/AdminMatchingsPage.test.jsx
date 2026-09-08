@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminMatchingsPage from "./AdminMatchingsPage";
 import * as adminService from "./adminService";
+import { MatchingLanguageProvider } from "../matching/MatchingLanguageContext";
 
 jest.mock("./adminService");
 
@@ -70,7 +71,11 @@ describe("AdminMatchingsPage", () => {
   });
 
   test("renders matching rows with readable status labels and detail links", async () => {
-    render(<AdminMatchingsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingsPage />
+    </MatchingLanguageProvider>
+  );
 
     expect(await screen.findByText("Waiting for mentor times")).toBeInTheDocument();
     expect(screen.getByText("Matched")).toBeInTheDocument();
@@ -82,7 +87,11 @@ describe("AdminMatchingsPage", () => {
   });
 
   test("status filter sends the exact backend status value", async () => {
-    render(<AdminMatchingsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingsPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByText("Waiting for mentor times");
 
     const statusSelect = screen.getByLabelText("Status");
@@ -99,7 +108,11 @@ describe("AdminMatchingsPage", () => {
   });
 
   test("participant filter sends participantId and can combine with status", async () => {
-    render(<AdminMatchingsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingsPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByText("Waiting for mentor times");
 
     const participantInput = screen.getByLabelText("Participant");
@@ -131,7 +144,11 @@ describe("AdminMatchingsPage", () => {
   });
 
   test("reset clears filters and reloads without query params", async () => {
-    render(<AdminMatchingsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingsPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByText("Waiting for mentor times");
 
     const statusSelect = screen.getByLabelText("Status");
@@ -158,7 +175,11 @@ describe("AdminMatchingsPage", () => {
       .mockResolvedValueOnce(sampleMatchings)
       .mockResolvedValueOnce([]);
 
-    render(<AdminMatchingsPage />);
+    render(
+    <MatchingLanguageProvider>
+      <AdminMatchingsPage />
+    </MatchingLanguageProvider>
+  );
     await screen.findByText("Waiting for mentor times");
 
     const statusSelect = screen.getByLabelText("Status");

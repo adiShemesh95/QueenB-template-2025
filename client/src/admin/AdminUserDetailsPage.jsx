@@ -12,6 +12,7 @@ import { Link as RouterLink, useParams } from "react-router-dom";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { getAdminUserById } from "./adminService";
 import { formatAdminDate, formatAdminDateTime } from "./adminFormat";
+import { useAdminLanguage } from "./translations";
 
 const sectionSx = {
   p: { xs: 2.5, sm: 3 },
@@ -44,9 +45,9 @@ function Field({ label, children }) {
   );
 }
 
-function ChipList({ items }) {
+function ChipList({ items, emptyLabel }) {
   if (!items || items.length === 0) {
-    return <Typography sx={{ color: "#6B7280" }}>—</Typography>;
+    return <Typography sx={{ color: "#6B7280" }}>{emptyLabel}</Typography>;
   }
   return (
     <Stack direction="row" flexWrap="wrap" gap={0.75}>
@@ -72,6 +73,7 @@ function ChipList({ items }) {
  */
 function AdminUserDetailsPage() {
   const { id } = useParams();
+  const { language, dir, t } = useAdminLanguage();
   const [user, setUser] = useState(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -105,11 +107,18 @@ function AdminUserDetailsPage() {
   const mentorProfile = user?.mentorProfile;
 
   return (
-    <Box>
+    <Box dir={dir} lang={language}>
       <Button
         component={RouterLink}
         to="/admin/users"
-        startIcon={<ArrowBackRoundedIcon />}
+        startIcon={
+          <ArrowBackRoundedIcon
+            sx={{
+              // Back action: point opposite reading flow (← LTR, → RTL)
+              transform: dir === "rtl" ? "scaleX(-1)" : "none",
+            }}
+          />
+        }
         sx={{
           mb: 2,
           px: 0,
@@ -121,7 +130,7 @@ function AdminUserDetailsPage() {
           },
         }}
       >
-        Back to users
+        {t.backToUsers}
       </Button>
 
       <Typography
@@ -134,7 +143,7 @@ function AdminUserDetailsPage() {
           mb: 3,
         }}
       >
-        User details
+        {t.userDetailsTitle}
       </Typography>
 
       {loading && (
@@ -148,19 +157,19 @@ function AdminUserDetailsPage() {
           }}
         >
           <CircularProgress size={36} sx={{ color: "#F75F8A" }} />
-          <Typography sx={{ color: "#4A5568" }}>Loading user…</Typography>
+          <Typography sx={{ color: "#4A5568" }}>{t.loadingUser}</Typography>
         </Box>
       )}
 
       {!loading && error && (
         <Alert severity="error" sx={{ borderRadius: 3 }}>
-          Could not load this user. Please try again.
+          {t.loadUserError}
         </Alert>
       )}
 
       {!loading && !error && user === null && (
         <Alert severity="info" sx={{ borderRadius: 3 }}>
-          User not found.
+          {t.userNotFound}
         </Alert>
       )}
 
@@ -171,7 +180,7 @@ function AdminUserDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Account
+              {t.sectionAccount}
             </Typography>
             <Box
               component="dl"
@@ -182,12 +191,12 @@ function AdminUserDetailsPage() {
                 m: 0,
               }}
             >
-              <Field label="ID">{user.id}</Field>
-              <Field label="Username">{user.username}</Field>
-              <Field label="Email">{user.email}</Field>
-              <Field label="Admin">{user.isAdmin ? "Yes" : "No"}</Field>
-              <Field label="Registered">
-                {formatAdminDateTime(user.createdAt)}
+              <Field label={t.fieldId}>{user.id}</Field>
+              <Field label={t.fieldUsername}>{user.username}</Field>
+              <Field label={t.fieldEmail}>{user.email}</Field>
+              <Field label={t.fieldAdmin}>{user.isAdmin ? t.yes : t.no}</Field>
+              <Field label={t.fieldRegistered}>
+                {formatAdminDateTime(user.createdAt, language)}
               </Field>
             </Box>
           </Box>
@@ -197,11 +206,10 @@ function AdminUserDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 1 }}
             >
-              Mentoring matchings
+              {t.sectionMentoringMatchings}
             </Typography>
             <Typography sx={{ color: "#6B7280", fontSize: "0.9rem", mb: 2 }}>
-              These counts currently represent matching records, not confirmed
-              completed mentoring sessions.
+              {t.mentoringMatchingsHint}
             </Typography>
             <Box
               component="dl"
@@ -212,8 +220,8 @@ function AdminUserDetailsPage() {
                 m: 0,
               }}
             >
-              <Field label="As mentor">{user.matchingCountAsMentor}</Field>
-              <Field label="As mentee">{user.matchingCountAsMentee}</Field>
+              <Field label={t.fieldAsMentor}>{user.matchingCountAsMentor}</Field>
+              <Field label={t.fieldAsMentee}>{user.matchingCountAsMentee}</Field>
             </Box>
           </Box>
 
@@ -222,10 +230,10 @@ function AdminUserDetailsPage() {
               component="h2"
               sx={{ fontWeight: 700, color: "#07142D", mb: 2 }}
             >
-              Mentor profile
+              {t.sectionMentorProfile}
             </Typography>
             {!mentorProfile ? (
-              <Typography sx={{ color: "#6B7280" }}>No mentor profile</Typography>
+              <Typography sx={{ color: "#6B7280" }}>{t.noMentorProfile}</Typography>
             ) : (
               <Box
                 component="dl"
@@ -236,37 +244,42 @@ function AdminUserDetailsPage() {
                   m: 0,
                 }}
               >
-                <Field label="Job">{mentorProfile.job || "—"}</Field>
-                <Field label="Company">{mentorProfile.company || "—"}</Field>
-                <Field label="Years experience">
-                  {mentorProfile.yearsExperience ?? "—"}
+                <Field label={t.fieldJob}>{mentorProfile.job || t.emDash}</Field>
+                <Field label={t.fieldCompany}>
+                  {mentorProfile.company || t.emDash}
                 </Field>
-                <Field label="Active">
-                  {mentorProfile.isActive ? "Yes" : "No"}
+                <Field label={t.fieldYearsExperience}>
+                  {mentorProfile.yearsExperience ?? t.emDash}
                 </Field>
-                <Field label="Max sessions">
-                  {mentorProfile.maxSessions ?? "—"}
+                <Field label={t.fieldActive}>
+                  {mentorProfile.isActive ? t.yes : t.no}
                 </Field>
-                <Field label="Session duration (min)">
-                  {mentorProfile.sessionDuration ?? "—"}
+                <Field label={t.fieldMaxSessions}>
+                  {mentorProfile.maxSessions ?? t.emDash}
+                </Field>
+                <Field label={t.fieldSessionDuration}>
+                  {mentorProfile.sessionDuration ?? t.emDash}
                 </Field>
                 <Box sx={{ gridColumn: "1 / -1" }}>
-                  <Field label="Background">
-                    {mentorProfile.background || "—"}
+                  <Field label={t.fieldBackground}>
+                    {mentorProfile.background || t.emDash}
                   </Field>
                 </Box>
                 <Box sx={{ gridColumn: "1 / -1" }}>
-                  <Field label="Topics">
-                    <ChipList items={mentorProfile.topics} />
+                  <Field label={t.fieldTopics}>
+                    <ChipList items={mentorProfile.topics} emptyLabel={t.emDash} />
                   </Field>
                 </Box>
                 <Box sx={{ gridColumn: "1 / -1" }}>
-                  <Field label="Tech stack">
-                    <ChipList items={mentorProfile.techStack} />
+                  <Field label={t.fieldTechStack}>
+                    <ChipList
+                      items={mentorProfile.techStack}
+                      emptyLabel={t.emDash}
+                    />
                   </Field>
                 </Box>
-                <Field label="Profile updated">
-                  {formatAdminDate(mentorProfile.updatedAt)}
+                <Field label={t.fieldProfileUpdated}>
+                  {formatAdminDate(mentorProfile.updatedAt, language)}
                 </Field>
               </Box>
             )}
