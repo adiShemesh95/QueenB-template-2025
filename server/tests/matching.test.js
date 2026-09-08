@@ -1196,3 +1196,260 @@ describe("POST /api/mentor-requests/:id/request-reschedule", () => {
     expect(res.body.error.code).toBe("ALREADY_USED");
   });
 });
+
+describe("POST /api/matching/:id/cancel-meeting", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  async function prepareMatched(mentee, mentor) {
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+    const otherSlot = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, false)
+       RETURNING *`,
+      [
+        matching.id,
+        new Date("2026-07-03T09:00:00.000Z"),
+        new Date("2026-07-03T09:30:00.000Z"),
+      ]
+    );
+    const selected = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, true)
+       RETURNING *`,
+      [
+        matching.id,
+        new Date("2026-07-03T10:00:00.000Z"),
+        new Date("2026-07-03T10:30:00.000Z"),
+      ]
+    );
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'MATCHED',
+           selected_slot_id = $2,
+           more_times_requested = false,
+           reschedule_used = false
+       WHERE id = $1`,
+      [matching.id, selected.rows[0].id]
+    );
+
+    return {
+      matching,
+      selectedSlot: selected.rows[0],
+      otherSlot: otherSlot.rows[0],
+    };
+  }
+
+  test("returns 200, sets CANCELLED, and keeps selected slot history", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching, selectedSlot, otherSlot } = await prepareMatched(
+      mentee,
+      mentor
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel-meeting`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        status: "CANCELLED",
+        selected_slot_id: selectedSlot.id,
+      })
+    );
+    expect(res.body.selected_slot).toEqual(
+      expect.objectContaining({ id: selectedSlot.id, isSelected: true })
+    );
+
+    const slots = await pool.query(
+      `SELECT id, is_selected
+       FROM matching_slots
+       WHERE matching_id = $1
+       ORDER BY id ASC`,
+      [matching.id]
+    );
+    expect(slots.rows).toHaveLength(2);
+    expect(slots.rows.map((row) => row.id).sort()).toEqual(
+      [otherSlot.id, selectedSlot.id].sort()
+    );
+    expect(
+      slots.rows.find((row) => row.id === selectedSlot.id).is_selected
+    ).toBe(true);
+    expect(slots.rows.find((row) => row.id === otherSlot.id).is_selected).toBe(
+      false
+    );
+  });
+
+  test("allows a new matching after CANCELLED", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    const cancelRes = await request(app)
+      .post(`/api/matching/${matching.id}/cancel-meeting`)
+      .set("Cookie", mentee.cookie);
+    expect(cancelRes.status).toBe(200);
+
+    const second = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId: mentor.user.id });
+
+    expect(second.status).toBe(201);
+    expect(second.body).toEqual(
+      expect.objectContaining({
+        mentee_id: mentee.user.id,
+        mentor_id: mentor.user.id,
+        status: "PENDING_MENTOR",
+      })
+    );
+  });
+
+  test("returns 400 when status is not MATCHED", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel-meeting`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Meeting cancellation is only available while status is MATCHED"
+    );
+  });
+
+  test("returns 404 when the matching belongs to another mentee", async () => {
+    const owner = await registerAuthenticatedUser();
+    const otherMentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(owner, mentor);
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel-meeting`)
+      .set("Cookie", otherMentee.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+
+  test("existing PENDING_MENTEE cancel still sets REJECTED, not CANCELLED", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("REJECTED");
+  });
+});
+
+describe("POST /api/mentor-requests/:id/cancel-meeting", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  async function prepareMatched(mentee, mentor) {
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+    const slot = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, true)
+       RETURNING *`,
+      [
+        matching.id,
+        new Date("2026-07-04T10:00:00.000Z"),
+        new Date("2026-07-04T10:30:00.000Z"),
+      ]
+    );
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'MATCHED',
+           selected_slot_id = $2,
+           reschedule_used = false
+       WHERE id = $1`,
+      [matching.id, slot.rows[0].id]
+    );
+
+    return { matching, slot: slot.rows[0] };
+  }
+
+  test("returns 200 for mentor, sets CANCELLED, keeps selected slot", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching, slot } = await prepareMatched(mentee, mentor);
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/cancel-meeting`)
+      .set("Cookie", mentor.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        status: "CANCELLED",
+        selected_slot_id: slot.id,
+      })
+    );
+
+    const slotRow = await pool.query(
+      `SELECT is_selected FROM matching_slots WHERE id = $1`,
+      [slot.id]
+    );
+    expect(slotRow.rows[0].is_selected).toBe(true);
+  });
+
+  test("returns 400 when status is not MATCHED", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/cancel-meeting`)
+      .set("Cookie", mentor.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("INVALID_STATUS");
+  });
+
+  test("returns 404 when called by a non-owner mentor", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const otherMentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/cancel-meeting`)
+      .set("Cookie", otherMentor.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+});

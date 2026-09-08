@@ -129,6 +129,17 @@ export async function requestReschedule(requestId) {
   return mapMatchingRow(response.data);
 }
 
+/**
+ * Mentee cancels a MATCHED meeting completely.
+ * POST /api/matching/:id/cancel-meeting
+ */
+export async function cancelMatchedMeeting(requestId) {
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/cancel-meeting`
+  );
+  return mapMatchingRow(response.data);
+}
+
 /** Test helper — resets mock store to the initial seed data. */
 export function __resetMockRequests() {
   requestsStore = structuredClone(MOCK_REQUESTS);

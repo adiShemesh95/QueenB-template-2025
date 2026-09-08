@@ -18,6 +18,7 @@ import StatusChip from "../matching/StatusChip";
 import { FILTER_ALL, REQUEST_STATUS } from "../matching/constants";
 import { formatDate, formatTimeRange } from "../matching/utils";
 import {
+  cancelMatchedMeeting,
   getMentorRequests,
   getMyMentorProfile,
   proposeSlots,
@@ -34,6 +35,7 @@ const MENTOR_STATUS_FILTER_VALUES = [
   REQUEST_STATUS.PENDING_MENTEE,
   REQUEST_STATUS.MATCHED,
   REQUEST_STATUS.REJECTED,
+  REQUEST_STATUS.CANCELLED,
 ];
 
 const filterToggleGroupSx = {
@@ -151,6 +153,7 @@ function MentorRequestCard({
   onReject,
   onProposeSlots,
   onRequestReschedule,
+  onCancelMeeting,
   actionLoadingId,
   sessionDurationMinutes,
 }) {
@@ -168,6 +171,12 @@ function MentorRequestCard({
     request.status === REQUEST_STATUS.PENDING_MENTEE;
   const canReschedule =
     request.status === REQUEST_STATUS.MATCHED && !request.rescheduleUsed;
+  const canCancelMeeting = request.status === REQUEST_STATUS.MATCHED;
+  const showProposedSlots =
+    (request.status === REQUEST_STATUS.PENDING_MENTOR ||
+      request.status === REQUEST_STATUS.PENDING_MENTEE) &&
+    Array.isArray(request.suggestedSlots) &&
+    request.suggestedSlots.length > 0;
 
   const updateStart = (index, value) => {
     setSlotDrafts((prev) =>
@@ -281,9 +290,7 @@ function MentorRequestCard({
         )}
       </Box>
 
-      {request.status !== REQUEST_STATUS.MATCHED &&
-        Array.isArray(request.suggestedSlots) &&
-        request.suggestedSlots.length > 0 && (
+      {showProposedSlots && (
           <Box sx={{ mb: 2 }}>
             <Typography
               sx={{
@@ -440,28 +447,73 @@ function MentorRequestCard({
         </Typography>
       )}
 
-      {canReschedule && (
-        <Button
-          variant="outlined"
-          disabled={busy}
-          onClick={() => onRequestReschedule(request.id)}
-          sx={{
-            mt: 1.5,
-            px: 2.5,
-            py: 1.1,
-            borderRadius: 3,
-            borderWidth: 1.5,
-            borderColor: "#F75F8A",
-            color: "#F75F8A",
-            "&:hover": {
-              borderWidth: 1.5,
-              borderColor: "#E04872",
-              backgroundColor: "rgba(247, 95, 138, 0.06)",
-            },
-          }}
+      {request.status === REQUEST_STATUS.CANCELLED && (
+        <Typography
+          sx={{ mt: 1, fontSize: "0.9rem", color: "#4A5568", fontWeight: 600 }}
         >
-          {t.requestReschedule}
-        </Button>
+          {request.meetingAt
+            ? t.cancelledMeetingLabel(
+                formatTimeRange(
+                  request.meetingAt,
+                  request.selectedSlot?.end,
+                  language
+                )
+              )
+            : t.meetingCancelled}
+        </Typography>
+      )}
+
+      {(canReschedule || canCancelMeeting) && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.25}
+          sx={{ mt: 1.5 }}
+        >
+          {canReschedule && (
+            <Button
+              variant="outlined"
+              disabled={busy}
+              onClick={() => onRequestReschedule(request.id)}
+              sx={{
+                px: 2.5,
+                py: 1.1,
+                borderRadius: 3,
+                borderWidth: 1.5,
+                borderColor: "#F75F8A",
+                color: "#F75F8A",
+                "&:hover": {
+                  borderWidth: 1.5,
+                  borderColor: "#E04872",
+                  backgroundColor: "rgba(247, 95, 138, 0.06)",
+                },
+              }}
+            >
+              {t.requestReschedule}
+            </Button>
+          )}
+          {canCancelMeeting && (
+            <Button
+              variant="outlined"
+              disabled={busy}
+              onClick={() => onCancelMeeting(request.id)}
+              sx={{
+                px: 2.5,
+                py: 1.1,
+                borderRadius: 3,
+                borderWidth: 1.5,
+                borderColor: "rgba(113, 128, 150, 0.45)",
+                color: "#4A5568",
+                "&:hover": {
+                  borderWidth: 1.5,
+                  borderColor: "#4A5568",
+                  backgroundColor: "rgba(113, 128, 150, 0.08)",
+                },
+              }}
+            >
+              {t.cancelMeeting}
+            </Button>
+          )}
+        </Stack>
       )}
     </Box>
   );
@@ -571,6 +623,25 @@ function MentorDashboardPage() {
     } catch (err) {
       const message =
         err?.response?.data?.error?.message || t.rescheduleError;
+      setFeedback({ severity: "error", message });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleCancelMeeting = async (requestId) => {
+    try {
+      setActionLoadingId(requestId);
+      setFeedback(null);
+      await cancelMatchedMeeting(requestId);
+      await loadRequests();
+      setFeedback({
+        severity: "info",
+        message: t.cancelMeetingSuccess,
+      });
+    } catch (err) {
+      const message =
+        err?.response?.data?.error?.message || t.cancelMeetingError;
       setFeedback({ severity: "error", message });
     } finally {
       setActionLoadingId(null);
@@ -694,6 +765,7 @@ function MentorDashboardPage() {
                   onReject={handleReject}
                   onProposeSlots={handleProposeSlots}
                   onRequestReschedule={handleRequestReschedule}
+                  onCancelMeeting={handleCancelMeeting}
                 />
               ))}
             </Stack>
