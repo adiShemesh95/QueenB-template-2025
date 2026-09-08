@@ -7,6 +7,7 @@ const {
   listMatchingsForAdmin,
   getMatchingForAdmin,
 } = require("../services/adminService");
+const { getDashboardAnalytics } = require("../services/analyticsService");
 const {
   buildError,
   internalError,
@@ -21,6 +22,18 @@ router.get("/users", async (req, res) => {
   } catch (err) {
     console.error("GET /api/admin/users failed:", err.message);
     return res.status(500).json(internalError());
+  }
+});
+
+// GET /api/admin/analytics — aggregated Smart Referral & Mentoring Analytics KPIs.
+// Auth/Admin checks are already enforced on /api/admin in app.js.
+router.get("/analytics", async (req, res) => {
+  try {
+    const analytics = await getDashboardAnalytics();
+    return res.status(200).json({ analytics });
+  } catch (err) {
+    console.error("GET /api/admin/analytics failed:", err.message);
+    return res.status(500).json(internalError("Failed to load analytics."));
   }
 });
 

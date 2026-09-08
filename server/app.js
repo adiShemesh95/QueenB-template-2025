@@ -44,6 +44,11 @@ app.use(
   authMiddleware,
   require("./routes/matching")
 );
+app.use(
+  "/api/analytics",
+  authMiddleware,
+  require("./routes/analytics")
+);
 // Admin APIs: authenticate first, then authorize Admin capability server-side.
 app.use(
   "/api/admin",

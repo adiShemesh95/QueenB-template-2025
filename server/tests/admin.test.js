@@ -79,6 +79,30 @@ beforeAll(() => {
 
 afterAll(async () => {
   if (createdUserIds.length) {
+    // Matching lifecycle analytics must be removed before fixtures,
+    // otherwise user deletes SET NULL and orphan events remain.
+    const { rows: testMatchings } = await pool.query(
+      `SELECT id FROM matching
+       WHERE mentee_id = ANY($1::int[])
+          OR mentor_id = ANY($1::int[])`,
+      [createdUserIds]
+    );
+    const testMatchingIds = testMatchings.map((row) => row.id);
+
+    if (testMatchingIds.length) {
+      await pool.query(
+        `DELETE FROM analytics_events
+         WHERE matching_id = ANY($1::int[])`,
+        [testMatchingIds]
+      );
+    }
+
+    await pool.query(
+      `DELETE FROM analytics_events
+       WHERE user_id = ANY($1::int[])
+          OR mentor_user_id = ANY($1::int[])`,
+      [createdUserIds]
+    );
     await pool.query(
       `DELETE FROM matching
        WHERE mentee_id = ANY($1::int[])
