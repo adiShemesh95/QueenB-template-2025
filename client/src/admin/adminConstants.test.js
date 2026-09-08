@@ -4,6 +4,7 @@ import {
   formatAdminTimeRange,
 } from "./adminFormat";
 import {
+  ADMIN_CALENDAR_LEGEND_STATUSES,
   ADMIN_MATCHING_STATUSES,
   getAdminStatusLabel,
   toAdminCalendarEvents,
@@ -34,6 +35,10 @@ describe("adminConstants", () => {
     );
     expect(getAdminStatusLabel("MATCHED")).toBe("Matched");
     expect(getAdminStatusLabel("REJECTED")).toBe("Rejected");
+  });
+
+  test("calendar legend lists only statuses that can be scheduled events", () => {
+    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED"]);
   });
 
   test("toAdminCalendarEvents skips matchings without selectedSlot", () => {

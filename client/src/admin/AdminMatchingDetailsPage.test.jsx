@@ -32,6 +32,7 @@ describe("AdminMatchingDetailsPage", () => {
       createdAt: "2026-02-01T09:00:00.000Z",
       updatedAt: "2026-02-02T09:00:00.000Z",
       moreTimesRequested: false,
+      rescheduleUsed: false,
       mentor: {
         id: 1,
         username: "mentorA",
@@ -79,8 +80,41 @@ describe("AdminMatchingDetailsPage", () => {
     expect(screen.getByText("mentee@ex.com")).toBeInTheDocument();
     expect(screen.getByText("Engineer")).toBeInTheDocument();
     expect(screen.getByText("Selected")).toBeInTheDocument();
+    expect(screen.getByText("More times requested")).toBeInTheDocument();
+    expect(screen.getByText("Reschedule used")).toBeInTheDocument();
     expect(screen.getByText("Feedback is not available yet.")).toBeInTheDocument();
     expect(screen.queryByText(/no feedback submitted/i)).not.toBeInTheDocument();
+  });
+
+  test("shows Reschedule used Yes when rescheduleUsed is true", async () => {
+    adminService.getAdminMatchingById.mockResolvedValue({
+      id: 12,
+      status: "PENDING_MENTOR",
+      createdAt: "2026-02-01T09:00:00.000Z",
+      updatedAt: "2026-02-03T09:00:00.000Z",
+      moreTimesRequested: false,
+      rescheduleUsed: true,
+      mentor: {
+        id: 1,
+        username: "mentorA",
+        email: "mentor@ex.com",
+        mentorProfile: null,
+      },
+      mentee: {
+        id: 2,
+        username: "menteeB",
+        email: "mentee@ex.com",
+      },
+      selectedSlot: null,
+      slots: [],
+      feedback: null,
+    });
+
+    render(<AdminMatchingDetailsPage />);
+
+    expect(await screen.findByText("Reschedule used")).toBeInTheDocument();
+    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.queryByText("RESCHEDULED")).not.toBeInTheDocument();
   });
 
   test("shows no selected meeting time when selectedSlot is null", async () => {
@@ -90,6 +124,7 @@ describe("AdminMatchingDetailsPage", () => {
       createdAt: "2026-02-01T09:00:00.000Z",
       updatedAt: "2026-02-01T09:00:00.000Z",
       moreTimesRequested: true,
+      rescheduleUsed: false,
       mentor: {
         id: 1,
         username: "mentorA",

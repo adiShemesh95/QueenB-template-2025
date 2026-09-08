@@ -733,6 +733,7 @@ function assertAdminMatchingDetail(matching) {
   expect(matching).toEqual(
     expect.objectContaining({
       moreTimesRequested: expect.any(Boolean),
+      rescheduleUsed: expect.any(Boolean),
       mentor: expect.objectContaining({
         id: expect.any(Number),
         username: expect.any(String),
@@ -845,6 +846,7 @@ describe("GET /api/admin/matchings/:id — detail data", () => {
     expect(matching.createdAt).toBeTruthy();
     expect(matching.updatedAt).toBeTruthy();
     expect(matching.moreTimesRequested).toBe(false);
+    expect(matching.rescheduleUsed).toBe(false);
     expect(matching.selectedSlot).toBeNull();
     expect(matching.slots).toEqual([]);
     expect(matching.feedback).toBeNull();
@@ -887,6 +889,29 @@ describe("GET /api/admin/matchings/:id — detail data", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.matching.moreTimesRequested).toBe(true);
+  });
+
+  test("returns rescheduleUsed true when matching flag is set", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const created = await createMatching(mentee.cookie, mentor.user.id);
+
+    // Historical latch only — status stays whatever production currently has.
+    await pool.query(
+      `UPDATE matching SET reschedule_used = true WHERE id = $1`,
+      [created.id]
+    );
+
+    const res = await request(app)
+      .get(`/api/admin/matchings/${created.id}`)
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.matching.rescheduleUsed).toBe(true);
+    expect(res.body.matching.status).toBe("PENDING_MENTOR");
   });
 
   test("includes mentorProfile when mentor has one; null when none", async () => {

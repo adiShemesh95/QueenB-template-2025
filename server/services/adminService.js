@@ -238,8 +238,8 @@ async function listMatchingsForAdmin(filters = {}) {
  */
 async function getMatchingForAdmin(matchingId) {
   // Same participant + selected-slot join pattern as the Stage 3 report, plus
-  // more_times_requested for detail. Join only via selected_slot_id so multiple
-  // proposed slots cannot duplicate this single matching row.
+  // more_times_requested and reschedule_used for detail. Join only via
+  // selected_slot_id so multiple proposed slots cannot duplicate this row.
   // Parameterized $1: matchingId is user-controlled and must never be concatenated.
   const matchingResult = await pool.query(
     `SELECT
@@ -248,6 +248,7 @@ async function getMatchingForAdmin(matchingId) {
        m.created_at,
        m.updated_at,
        m.more_times_requested,
+       m.reschedule_used,
        mentor_user.id AS mentor_id,
        mentor_user.username AS mentor_username,
        mentor_user.email AS mentor_email,
@@ -295,6 +296,9 @@ async function getMatchingForAdmin(matchingId) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     moreTimesRequested: Boolean(row.more_times_requested),
+    // Historical latch: true once the one allowed post-MATCHED reschedule was used.
+    // Not a status — current status may still be PENDING_MENTOR or MATCHED again.
+    rescheduleUsed: row.reschedule_used === true,
     mentor: {
       ...toAdminMatchingParticipant(
         row.mentor_id,

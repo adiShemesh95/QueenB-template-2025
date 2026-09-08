@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import AdminCalendarPage from "./AdminCalendarPage";
 import * as adminService from "./adminService";
 import {
+  ADMIN_CALENDAR_LEGEND_STATUSES,
   ADMIN_MATCHING_STATUSES,
   ADMIN_STATUS_LABELS,
   toAdminCalendarEvents,
@@ -86,6 +87,7 @@ describe("toAdminCalendarEvents", () => {
       "MATCHED",
       "REJECTED",
     ]);
+    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED"]);
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("ATTENDANCE_CONFIRMED");
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("HAPPENED");
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("DID_NOT_HAPPEN");
@@ -179,11 +181,21 @@ describe("AdminCalendarPage", () => {
     );
     expect(eventButton.getAttribute("aria-label")).toMatch(/Matched/i);
 
+    expect(
+      screen.getByText(
+        /view all scheduled mentoring meetings/i
+      )
+    ).toBeInTheDocument();
+
     const legend = screen.getByLabelText(/status color legend/i);
     expect(within(legend).getByText("Matched")).toBeInTheDocument();
     expect(
-      within(legend).getByText("Waiting for mentee selection")
-    ).toBeInTheDocument();
+      within(legend).queryByText("Waiting for mentor times")
+    ).not.toBeInTheDocument();
+    expect(
+      within(legend).queryByText("Waiting for mentee selection")
+    ).not.toBeInTheDocument();
+    expect(within(legend).queryByText("Rejected")).not.toBeInTheDocument();
   });
 
   test("clicking event opens Meeting Details panel without navigating away", async () => {
@@ -348,6 +360,121 @@ describe("AdminCalendarPage", () => {
       screen.getByRole("button", { name: /go to current month/i })
     );
     expect(monthHeading.textContent).toBe(initialLabel);
+  });
+  test("proposed slots do not become calendar meetings", async () => {
+    const withProposedOnly = {
+      ...unscheduledMatching,
+      id: 99,
+      status: "PENDING_MENTEE",
+      selectedSlot: null,
+      // Report may include proposed slots elsewhere; Calendar ignores them.
+    };
+    adminService.getAdminMatchings.mockResolvedValue([
+      withProposedOnly,
+      scheduledMatching,
+    ]);
+
+    render(<AdminCalendarPage />);
+
+    expect(
+      await screen.findByRole("button", { name: /mentorA ↔ menteeC/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /menteeB/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /↔/i })).toHaveLength(1);
+  });
+
+  test("multiple meetings on the same day render as separate events", async () => {
+    const day = new Date();
+    day.setHours(10, 0, 0, 0);
+    const morning = {
+      ...scheduledMatching,
+      id: 101,
+      mentee: { id: 3, username: "menteeMorning", email: "m@ex.com" },
+      selectedSlot: {
+        id: 1,
+        start: new Date(day).toISOString(),
+        end: new Date(day.getTime() + 60 * 60 * 1000).toISOString(),
+      },
+    };
+    const afternoonStart = new Date(day);
+    afternoonStart.setHours(14, 0, 0, 0);
+    const afternoon = {
+      ...scheduledMatching,
+      id: 102,
+      mentee: { id: 4, username: "menteeAfternoon", email: "a@ex.com" },
+      selectedSlot: {
+        id: 2,
+        start: afternoonStart.toISOString(),
+        end: new Date(afternoonStart.getTime() + 60 * 60 * 1000).toISOString(),
+      },
+    };
+
+    adminService.getAdminMatchings.mockResolvedValue([morning, afternoon]);
+
+    render(<AdminCalendarPage />);
+
+    expect(
+      await screen.findByRole("button", { name: /menteeMorning/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /menteeAfternoon/i })
+    ).toBeInTheDocument();
+  });
+
+  test("previous and next month scheduled meetings appear when navigating", async () => {
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 12, 10, 0, 0);
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 10, 13, 0, 0);
+
+    adminService.getAdminMatchings.mockResolvedValue([
+      {
+        ...scheduledMatching,
+        id: 201,
+        mentee: { id: 8, username: "prevMentee", email: "p@ex.com" },
+        selectedSlot: {
+          id: 11,
+          start: prev.toISOString(),
+          end: new Date(prev.getTime() + 45 * 60 * 1000).toISOString(),
+        },
+      },
+      {
+        ...scheduledMatching,
+        id: 202,
+        mentee: { id: 9, username: "nextMentee", email: "n@ex.com" },
+        selectedSlot: {
+          id: 12,
+          start: next.toISOString(),
+          end: new Date(next.getTime() + 45 * 60 * 1000).toISOString(),
+        },
+      },
+    ]);
+
+    render(<AdminCalendarPage />);
+    await screen.findByRole("grid", { name: /calendar for/i });
+
+    expect(
+      screen.queryByRole("button", { name: /prevMentee/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /nextMentee/i })
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /previous month/i })
+    );
+    expect(
+      await screen.findByRole("button", { name: /prevMentee/i })
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /go to current month/i })
+    );
+    await userEvent.click(screen.getByRole("button", { name: /next month/i }));
+    expect(
+      await screen.findByRole("button", { name: /nextMentee/i })
+    ).toBeInTheDocument();
   });
 });
 

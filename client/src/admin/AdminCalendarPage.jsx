@@ -17,7 +17,7 @@ import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined
 import { Link as RouterLink } from "react-router-dom";
 import { getAdminMatchings } from "./adminService";
 import {
-  ADMIN_MATCHING_STATUSES,
+  ADMIN_CALENDAR_LEGEND_STATUSES,
   getAdminStatusColors,
   getAdminStatusLabel,
   toAdminCalendarEvents,
@@ -113,7 +113,7 @@ function StatusLegend() {
       aria-label="Status color legend"
       sx={{ mb: 2 }}
     >
-      {ADMIN_MATCHING_STATUSES.map((status) => {
+      {ADMIN_CALENDAR_LEGEND_STATUSES.map((status) => {
         const colors = getAdminStatusColors(status);
         return (
           <Box
@@ -365,8 +365,8 @@ function DetailBlock({ label, children }) {
  * - The month grid stays visible even with zero events (empty calendar ≠ empty page).
  * - Desktop always shows a Meeting Details column (~30%); click fills the summary
  *   (does not navigate away). Full detail stays on /admin/matchings/:id.
- * - Status colors are Admin-local (four production statuses only).
- * - Attendance / feedback / Admin Alerts are outside Stage 6.
+ * - Legend lists only statuses that can actually appear as scheduled events
+ *   under the current lifecycle (today: MATCHED). Extensible later.
  */
 function AdminCalendarPage() {
   const [matchings, setMatchings] = useState([]);
@@ -475,8 +475,8 @@ function AdminCalendarPage() {
           fontSize: "0.95rem",
         }}
       >
-        Scheduled matching meetings. Only matchings with a selected meeting time
-        appear here — proposed slots are not shown as separate meetings.
+        View all scheduled mentoring meetings. Each meeting is displayed on its
+        selected date and time and color-coded by its current status.
       </Typography>
 
       <StatusLegend />

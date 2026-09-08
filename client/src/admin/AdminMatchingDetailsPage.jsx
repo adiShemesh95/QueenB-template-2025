@@ -79,6 +79,9 @@ function ChipList({ items }) {
  *
  * feedback is currently always null from Stage 4 — show "unavailable"
  * instead of inventing feedback UI.
+ *
+ * moreTimesRequested / rescheduleUsed are historical process flags from the
+ * matching row — not statuses.
  */
 function AdminMatchingDetailsPage() {
   const { id } = useParams();
@@ -206,6 +209,9 @@ function AdminMatchingDetailsPage() {
               </Field>
               <Field label="More times requested">
                 {matching.moreTimesRequested ? "Yes" : "No"}
+              </Field>
+              <Field label="Reschedule used">
+                {matching.rescheduleUsed ? "Yes" : "No"}
               </Field>
             </Box>
           </Box>

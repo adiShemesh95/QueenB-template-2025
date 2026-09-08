@@ -8,7 +8,9 @@
     "dev": "nodemon index.js",
     "test": "NODE_ENV=test jest --runInBand --forceExit",
     "db:init-matching": "node scripts/initMatchingTable.js",
-    "db:init-mentors": "node scripts/initMentorTables.js"
+    "db:init-mentors": "node scripts/initMentorTables.js",
+    "seed:admin-qa": "node scripts/seedAdminQaData.js",
+    "cleanup:admin-qa": "node scripts/cleanupAdminQaData.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

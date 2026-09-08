@@ -22,13 +22,27 @@ export const ADMIN_STATUS_LABELS = {
 };
 
 /**
+ * Statuses that can appear as Calendar events under the CURRENT lifecycle.
+ *
+ * Production only sets selected_slot_id when mentee selects a slot, and that
+ * transition always sets status to MATCHED. Reschedule clears selected_slot_id
+ * before returning to PENDING_MENTOR. PENDING_* / REJECTED therefore never
+ * represent scheduled Calendar meetings today.
+ *
+ * When later official post-MATCHED statuses exist in production and keep a
+ * selected meeting time, append them here (and to ADMIN_STATUS_COLORS) — do
+ * not invent them early.
+ */
+export const ADMIN_CALENDAR_LEGEND_STATUSES = ["MATCHED"];
+
+/**
  * Admin-local status visuals (chips + calendar events).
  * Isolated under client/src/admin so we do not refactor teammate-owned
  * matching constants just to share colors. Calendar reuses this map so
  * status styling stays centralized — not scattered as inline hex values.
  *
- * Only the four CURRENT production statuses; Stage 7 lifecycle colors
- * (attendance / outcome / feedback) are intentionally omitted.
+ * Only the four CURRENT production statuses; future official Calendar colors
+ * (attendance / outcome / feedback) are added only when those statuses exist.
  */
 export const ADMIN_STATUS_COLORS = {
   PENDING_MENTOR: {
