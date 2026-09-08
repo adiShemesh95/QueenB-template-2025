@@ -8,6 +8,13 @@ const translations = {
     mockUserRole: "Mentee",
     home: "Home",
     back: "Back",
+    navBrowseMentors: "Browse Mentors",
+    navBecomeMentor: "Become Mentor",
+    navMyRequests: "My Requests",
+    navMentorInbox: "Mentor Inbox",
+    navLogout: "Logout",
+    navLoggingOut: "Logging out...",
+    navLogoutError: "Unable to log out right now. Please try again.",
     myRequests: "My Requests",
     myRequestsSubtitle:
       "Track your mentoring requests and continue matching when a mentor responds.",
@@ -62,6 +69,13 @@ const translations = {
     moreTimesSuccess:
       "We asked your mentor for more times. You can only do this once per request.",
     moreTimesError: "Could not request more times.",
+    cancelRequest: "Cancel request",
+    cancelSuccess: "This mentoring request was cancelled.",
+    cancelError: "Could not cancel this request.",
+    requestReschedule: "Request reschedule",
+    rescheduleSuccess:
+      "Reschedule requested. Your mentor will propose new times.",
+    rescheduleError: "Could not request a reschedule.",
   },
   he: {
     languageAria: "בחירת שפה",
@@ -70,6 +84,13 @@ const translations = {
     mockUserRole: "מנטית",
     home: "דף הבית",
     back: "חזרה",
+    navBrowseMentors: "חיפוש מנטוריות",
+    navBecomeMentor: "להפוך למנטורית",
+    navMyRequests: "הבקשות שלי",
+    navMentorInbox: "תיבת המנטורית",
+    navLogout: "התנתקות",
+    navLoggingOut: "מתנתקת...",
+    navLogoutError: "לא ניתן להתנתק כרגע. נסי שוב.",
     myRequests: "הבקשות שלי",
     myRequestsSubtitle:
       "עקבי אחרי בקשות המנטורינג שלך והמשיכי בהתאמה כשהמנטורית מגיבה.",
@@ -119,6 +140,12 @@ const translations = {
     moreTimesSuccess:
       "ביקשנו מהמנטורית מועדים נוספים. אפשר לעשות זאת רק פעם אחת לכל בקשה.",
     moreTimesError: "לא ניתן לבקש מועדים נוספים.",
+    cancelRequest: "ביטול הבקשה",
+    cancelSuccess: "בקשת המנטורינג בוטלה.",
+    cancelError: "לא ניתן לבטל את הבקשה.",
+    requestReschedule: "בקשת שינוי מועד",
+    rescheduleSuccess: "בקשת שינוי המועד נשלחה. המנטורית תציע מועדים חדשים.",
+    rescheduleError: "לא ניתן לבקש שינוי מועד.",
   },
 };
 

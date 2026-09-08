@@ -60,6 +60,7 @@ function mapMatchingRow(row) {
     selectedSlot,
     meetingAt: selectedSlot?.start || null,
     moreTimesRequested: Boolean(row.more_times_requested),
+    rescheduleUsed: Boolean(row.reschedule_used ?? row.rescheduleUsed),
   };
 }
 
@@ -102,6 +103,28 @@ export async function selectTimeSlot(requestId, slotId) {
 export async function requestMoreTimes(requestId) {
   const response = await matchingClient.post(
     `/api/matching/${requestId}/request-more-times`
+  );
+  return mapMatchingRow(response.data);
+}
+
+/**
+ * Mentee cancels after a second slot set still does not work.
+ * POST /api/matching/:id/cancel
+ */
+export async function cancelMatchingRequest(requestId) {
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/cancel`
+  );
+  return mapMatchingRow(response.data);
+}
+
+/**
+ * Mentee starts a one-time post-MATCHED reschedule.
+ * POST /api/matching/:id/request-reschedule
+ */
+export async function requestReschedule(requestId) {
+  const response = await matchingClient.post(
+    `/api/matching/${requestId}/request-reschedule`
   );
   return mapMatchingRow(response.data);
 }

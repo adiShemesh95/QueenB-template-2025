@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -10,7 +10,9 @@ import {
   FormHelperText,
   Stack,
   TextField,
+  ThemeProvider,
   Typography,
+  createTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import MentorLayout from "./MentorLayout";
@@ -19,6 +21,8 @@ import {
   getMyMentorProfile,
   saveMentorProfile,
 } from "./mentorService";
+import { useMentorLanguage } from "./translations";
+import appTheme from "../theme";
 
 const formCardSx = {
   p: { xs: 2.5, sm: 3.5 },
@@ -47,6 +51,22 @@ function emptyFieldErrors() {
 
 function BecomeMentorPage() {
   const navigate = useNavigate();
+  const { t, dir } = useMentorLanguage();
+  const formTheme = useMemo(
+    () => createTheme(appTheme, { direction: dir }),
+    [dir]
+  );
+  const fieldSx =
+    dir === "rtl"
+      ? {
+          "& .MuiInputLabel-root": {
+            textAlign: "right",
+          },
+          "& .MuiFormHelperText-root": {
+            textAlign: "right",
+          },
+        }
+      : undefined;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState("");
@@ -110,7 +130,7 @@ function BecomeMentorPage() {
 
   const toggleTopic = (topic) => {
     setTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+      prev.includes(topic) ? prev.filter((item) => item !== topic) : [...prev, topic]
     );
   };
 
@@ -122,18 +142,18 @@ function BecomeMentorPage() {
     setSuccessMessage("");
     const errors = emptyFieldErrors();
 
-    if (!job.trim()) errors.job = "Job title is required.";
-    if (!company.trim()) errors.company = "Company is required.";
-    if (topics.length === 0) errors.topics = "Select at least one topic.";
+    if (!job.trim()) errors.job = t.jobRequired;
+    if (!company.trim()) errors.company = t.companyRequired;
+    if (topics.length === 0) errors.topics = t.topicsRequired;
 
     if (yearsExperience !== "" && !Number.isInteger(Number(yearsExperience))) {
-      errors.yearsExperience = "Enter a whole number.";
+      errors.yearsExperience = t.wholeNumber;
     }
     if (maxSessions !== "" && !Number.isInteger(Number(maxSessions))) {
-      errors.maxSessions = "Enter a whole number.";
+      errors.maxSessions = t.wholeNumber;
     }
     if (sessionDuration !== "" && !Number.isInteger(Number(sessionDuration))) {
-      errors.sessionDuration = "Enter a whole number.";
+      errors.sessionDuration = t.wholeNumber;
     }
 
     setFieldErrors(errors);
@@ -160,11 +180,7 @@ function BecomeMentorPage() {
       });
 
       setIsEdit(true);
-      setSuccessMessage(
-        isEdit
-          ? "Your mentor profile was updated."
-          : "Your mentor profile is live!"
-      );
+      setSuccessMessage(isEdit ? t.profileUpdated : t.profileLive);
 
       if (saved?.id) {
         setTimeout(() => navigate(`/mentors/${saved.id}`), 700);
@@ -182,10 +198,7 @@ function BecomeMentorPage() {
         });
         setFieldErrors(mapped);
       } else {
-        setGeneralError(
-          apiError?.message ||
-            "Unable to save your mentor profile. Please try again."
-        );
+        setGeneralError(apiError?.message || t.saveProfileError);
       }
     } finally {
       setSubmitting(false);
@@ -195,9 +208,9 @@ function BecomeMentorPage() {
   if (loading) {
     return (
       <MentorLayout
-        title="Become a mentor"
+        title={t.becomeMentorTitle}
         backTo="/mentors"
-        backLabel="Mentors"
+        backLabel={t.mentors}
       >
         <Box
           sx={{
@@ -214,12 +227,19 @@ function BecomeMentorPage() {
 
   return (
     <MentorLayout
-      title={isEdit ? "Edit mentor profile" : "Become a mentor"}
-      subtitle="Share your experience so mentees can find the right match."
+      title={isEdit ? t.editMentorTitle : t.becomeMentorTitle}
+      subtitle={t.becomeMentorSubtitle}
       backTo="/mentors"
-      backLabel="Mentors"
+      backLabel={t.mentors}
     >
-      <Box component="form" onSubmit={handleSubmit} noValidate sx={formCardSx}>
+      <ThemeProvider theme={formTheme}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          dir={dir}
+          sx={formCardSx}
+        >
         {generalError ? (
           <Alert severity="error" sx={{ borderRadius: 2 }}>
             {generalError}
@@ -233,7 +253,7 @@ function BecomeMentorPage() {
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
-            label="Job title"
+            label={t.jobTitle}
             value={job}
             onChange={(e) => setJob(e.target.value)}
             error={Boolean(fieldErrors.job)}
@@ -241,9 +261,10 @@ function BecomeMentorPage() {
             disabled={submitting}
             fullWidth
             required
+            sx={fieldSx}
           />
           <TextField
-            label="Company"
+            label={t.company}
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             error={Boolean(fieldErrors.company)}
@@ -251,12 +272,13 @@ function BecomeMentorPage() {
             disabled={submitting}
             fullWidth
             required
+            sx={fieldSx}
           />
         </Stack>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
-            label="Years of experience"
+            label={t.yearsOfExperience}
             type="number"
             value={yearsExperience}
             onChange={(e) => setYearsExperience(e.target.value)}
@@ -265,9 +287,10 @@ function BecomeMentorPage() {
             disabled={submitting}
             fullWidth
             inputProps={{ min: 0 }}
+            sx={fieldSx}
           />
           <TextField
-            label="Session duration (minutes)"
+            label={t.sessionDurationMinutes}
             type="number"
             value={sessionDuration}
             onChange={(e) => setSessionDuration(e.target.value)}
@@ -276,9 +299,10 @@ function BecomeMentorPage() {
             disabled={submitting}
             fullWidth
             inputProps={{ min: 1 }}
+            sx={fieldSx}
           />
           <TextField
-            label="Max sessions"
+            label={t.maxSessions}
             type="number"
             value={maxSessions}
             onChange={(e) => setMaxSessions(e.target.value)}
@@ -287,36 +311,34 @@ function BecomeMentorPage() {
             disabled={submitting}
             fullWidth
             inputProps={{ min: 1 }}
+            sx={fieldSx}
           />
         </Stack>
 
         <TextField
-          label="Tech stack"
+          label={t.techStackField}
           value={techStack}
           onChange={(e) => setTechStack(e.target.value)}
           error={Boolean(fieldErrors.techStack)}
-          helperText={
-            fieldErrors.techStack || "Comma-separated skills (e.g. React, Node.js)"
-          }
+          helperText={fieldErrors.techStack || t.techStackHelper}
           disabled={submitting}
           fullWidth
+          sx={fieldSx}
         />
 
         <TextField
-          label="Profile picture URL"
+          label={t.profilePictureUrl}
           value={profileImageUrl}
           onChange={(e) => setProfileImageUrl(e.target.value)}
           error={Boolean(fieldErrors.profileImageUrl)}
-          helperText={
-            fieldErrors.profileImageUrl ||
-            "Paste a LinkedIn-style photo URL (optional)"
-          }
+          helperText={fieldErrors.profileImageUrl || t.profilePictureHelper}
           disabled={submitting}
           fullWidth
+          sx={fieldSx}
         />
 
         <TextField
-          label="Background"
+          label={t.backgroundField}
           value={background}
           onChange={(e) => setBackground(e.target.value)}
           error={Boolean(fieldErrors.background)}
@@ -325,13 +347,20 @@ function BecomeMentorPage() {
           fullWidth
           multiline
           minRows={3}
+          sx={fieldSx}
         />
 
         <Box>
           <Typography
-            sx={{ fontWeight: 600, color: "#07142D", mb: 1, fontSize: "0.95rem" }}
+            sx={{
+              fontWeight: 600,
+              color: "#07142D",
+              mb: 1,
+              fontSize: "0.95rem",
+              textAlign: dir === "rtl" ? "right" : "left",
+            }}
           >
-            Mentoring topics
+            {t.mentoringTopics}
           </Typography>
           <FormGroup>
             <Stack direction="row" flexWrap="wrap" useFlexGap>
@@ -355,7 +384,10 @@ function BecomeMentorPage() {
               ))}
             </Stack>
           </FormGroup>
-          <FormHelperText error={Boolean(fieldErrors.topics)}>
+          <FormHelperText
+            error={Boolean(fieldErrors.topics)}
+            sx={dir === "rtl" ? { textAlign: "right" } : undefined}
+          >
             {fieldErrors.topics || " "}
           </FormHelperText>
         </Box>
@@ -372,7 +404,7 @@ function BecomeMentorPage() {
               }}
             />
           }
-          label="Show my profile in the mentors directory"
+          label={t.showInDirectory}
           sx={{ color: "#4A5568" }}
         />
 
@@ -394,15 +426,16 @@ function BecomeMentorPage() {
           {submitting ? (
             <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
               <CircularProgress size={18} color="inherit" />
-              Saving…
+              {t.saving}
             </Box>
           ) : isEdit ? (
-            "Save changes"
+            t.saveChanges
           ) : (
-            "Publish mentor profile"
+            t.publishProfile
           )}
         </Button>
-      </Box>
+        </Box>
+      </ThemeProvider>
     </MentorLayout>
   );
 }

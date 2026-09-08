@@ -11,6 +11,7 @@ import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import LanguageSelector from "./home/LanguageSelector";
 import { useAuth } from "../context/AuthContext";
+import matchingTranslations from "../matching/translations";
 
 function getUsernameInitials(username) {
   const name = String(username || "").trim();
@@ -59,16 +60,19 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
   const initials = getUsernameInitials(username);
   const showLanguage =
     typeof language === "string" && typeof onLanguageChange === "function";
+  const t =
+    (showLanguage && matchingTranslations[language]) ||
+    matchingTranslations.en;
 
   const links = [
     ...(!isDashboard
       ? [
-          { to: "/mentors", label: "Browse Mentors" },
-          { to: "/become-mentor", label: "Become Mentor" },
+          { to: "/mentors", label: t.navBrowseMentors },
+          { to: "/become-mentor", label: t.navBecomeMentor },
         ]
       : []),
-    { to: "/my-requests", label: "My Requests" },
-    { to: "/mentor-inbox", label: "Mentor Inbox" },
+    { to: "/my-requests", label: t.navMyRequests },
+    { to: "/mentor-inbox", label: t.navMentorInbox },
   ];
 
   const handleLogout = async () => {
@@ -79,7 +83,7 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
       await logout();
       navigate("/");
     } catch {
-      setLogoutError("Unable to log out right now. Please try again.");
+      setLogoutError(t.navLogoutError);
     } finally {
       setLoggingOut(false);
     }
@@ -217,14 +221,14 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
               },
             }}
           >
-            {loggingOut ? "Logging out..." : "Logout"}
+            {loggingOut ? t.navLoggingOut : t.navLogout}
           </Button>
 
           {showLanguage ? (
             <LanguageSelector
               language={language}
               onLanguageChange={onLanguageChange}
-              ariaLabel={languageAria || "Select language"}
+              ariaLabel={languageAria || t.languageAria}
             />
           ) : null}
         </Box>

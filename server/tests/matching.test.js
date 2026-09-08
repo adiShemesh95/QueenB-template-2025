@@ -55,11 +55,16 @@ async function registerActiveMentor() {
   return mentor;
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   require("dotenv").config();
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET must be set in server/.env for tests");
   }
+
+  await pool.query(
+    `ALTER TABLE matching
+     ADD COLUMN IF NOT EXISTS reschedule_used BOOLEAN NOT NULL DEFAULT FALSE`
+  );
 });
 
 afterAll(async () => {
@@ -842,5 +847,352 @@ describe("POST /api/matching/:id/select-slot", () => {
       [matching.id]
     );
     expect(selectedCount.rows[0].count).toBe(1);
+  });
+});
+
+describe("POST /api/matching/:id/cancel", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  test("returns 200 and sets status to REJECTED when allowed", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        mentee_id: mentee.user.id,
+        mentor_id: mentor.user.id,
+        more_times_requested: true,
+        status: "REJECTED",
+      })
+    );
+  });
+
+  test("returns 400 when status is not PENDING_MENTEE", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    expect(matching.status).toBe("PENDING_MENTOR");
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Cancellation is only available while status is PENDING_MENTEE"
+    );
+  });
+
+  test("returns 400 when more_times_requested is false", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = false
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Cancellation is only available after additional times were already requested"
+    );
+  });
+
+  test("returns 404 when the matching belongs to another mentee", async () => {
+    const owner = await registerAuthenticatedUser();
+    const otherMentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(owner, mentor.user.id);
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'PENDING_MENTEE',
+           more_times_requested = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/cancel`)
+      .set("Cookie", otherMentee.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+});
+
+describe("POST /api/matching/:id/request-reschedule", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  async function prepareMatched(mentee, mentor) {
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+    const slot = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, true)
+       RETURNING *`,
+      [
+        matching.id,
+        new Date("2026-07-01T10:00:00.000Z"),
+        new Date("2026-07-01T10:30:00.000Z"),
+      ]
+    );
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'MATCHED',
+           selected_slot_id = $2,
+           more_times_requested = true,
+           reschedule_used = false
+       WHERE id = $1`,
+      [matching.id, slot.rows[0].id]
+    );
+
+    return { matching, slot: slot.rows[0] };
+  }
+
+  test("returns 200 for mentee and clears match state", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching, slot } = await prepareMatched(mentee, mentor);
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/request-reschedule`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        status: "PENDING_MENTOR",
+        selected_slot_id: null,
+        reschedule_used: true,
+        more_times_requested: false,
+      })
+    );
+    expect(res.body.suggested_slots).toEqual([]);
+
+    const slotsLeft = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM matching_slots
+       WHERE matching_id = $1 OR id = $2`,
+      [matching.id, slot.id]
+    );
+    expect(slotsLeft.rows[0].count).toBe(0);
+  });
+
+  test("returns 400 when status is not MATCHED", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/request-reschedule`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(
+      "Rescheduling is only available while status is MATCHED"
+    );
+  });
+
+  test("returns 409 when reschedule_used is already true", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    await pool.query(
+      `UPDATE matching
+       SET reschedule_used = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/request-reschedule`)
+      .set("Cookie", mentee.cookie);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe(
+      "Rescheduling was already used for this matching"
+    );
+  });
+
+  test("returns 404 when the matching belongs to another mentee", async () => {
+    const owner = await registerAuthenticatedUser();
+    const otherMentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(owner, mentor);
+
+    const res = await request(app)
+      .post(`/api/matching/${matching.id}/request-reschedule`)
+      .set("Cookie", otherMentee.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Matching not found");
+  });
+
+  test("after mentee reschedule, mentor can propose slots again", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    const reschedule = await request(app)
+      .post(`/api/matching/${matching.id}/request-reschedule`)
+      .set("Cookie", mentee.cookie);
+    expect(reschedule.status).toBe(200);
+
+    const propose = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/slots`)
+      .set("Cookie", mentor.cookie)
+      .send({
+        slots: [
+          {
+            startTime: "2026-08-01T09:00:00.000Z",
+            endTime: "2026-08-01T09:30:00.000Z",
+          },
+        ],
+      });
+
+    expect(propose.status).toBe(200);
+    expect(propose.body.matching.status).toBe("PENDING_MENTEE");
+    expect(propose.body.slots).toHaveLength(1);
+  });
+});
+
+describe("POST /api/mentor-requests/:id/request-reschedule", () => {
+  async function createMatchingFor(mentee, mentorId) {
+    const created = await request(app)
+      .post("/api/matching")
+      .set("Cookie", mentee.cookie)
+      .send({ mentorId });
+    expect(created.status).toBe(201);
+    return created.body;
+  }
+
+  async function prepareMatched(mentee, mentor) {
+    const matching = await createMatchingFor(mentee, mentor.user.id);
+    const slot = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, true)
+       RETURNING *`,
+      [
+        matching.id,
+        new Date("2026-07-02T10:00:00.000Z"),
+        new Date("2026-07-02T10:30:00.000Z"),
+      ]
+    );
+
+    await pool.query(
+      `UPDATE matching
+       SET status = 'MATCHED',
+           selected_slot_id = $2,
+           more_times_requested = true,
+           reschedule_used = false
+       WHERE id = $1`,
+      [matching.id, slot.rows[0].id]
+    );
+
+    return { matching, slot: slot.rows[0] };
+  }
+
+  test("returns 200 for mentor and clears match state", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/request-reschedule`)
+      .set("Cookie", mentor.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        id: matching.id,
+        status: "PENDING_MENTOR",
+        selected_slot_id: null,
+        reschedule_used: true,
+        more_times_requested: false,
+      })
+    );
+
+    const slotsLeft = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM matching_slots
+       WHERE matching_id = $1`,
+      [matching.id]
+    );
+    expect(slotsLeft.rows[0].count).toBe(0);
+  });
+
+  test("returns 404 when called by a non-owner mentor", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const otherMentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/request-reschedule`)
+      .set("Cookie", otherMentor.cookie);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  test("returns 409 when reschedule_used is already true", async () => {
+    const mentee = await registerAuthenticatedUser();
+    const mentor = await registerActiveMentor();
+    const { matching } = await prepareMatched(mentee, mentor);
+
+    await pool.query(
+      `UPDATE matching
+       SET reschedule_used = true
+       WHERE id = $1`,
+      [matching.id]
+    );
+
+    const res = await request(app)
+      .post(`/api/mentor-requests/${matching.id}/request-reschedule`)
+      .set("Cookie", mentor.cookie);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("ALREADY_USED");
   });
 });

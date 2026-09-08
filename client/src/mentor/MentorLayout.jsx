@@ -3,6 +3,7 @@ import { Box, Container, Typography, Button } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { Link as RouterLink } from "react-router-dom";
 import MatchingHeader from "../matching/MatchingHeader";
+import { useMentorLanguage } from "./translations";
 
 const pageBackground = `
   radial-gradient(ellipse 80% 55% at 0% 0%, rgba(141, 216, 247, 0.35) 0%, transparent 55%),
@@ -18,10 +19,13 @@ function MentorLayout({
   title,
   subtitle,
   backTo,
-  backLabel = "Back",
+  backLabel,
   children,
   actions,
 }) {
+  const { dir, language, t } = useMentorLanguage();
+  const resolvedBackLabel = backLabel || t.back;
+
   return (
     <Box
       sx={{
@@ -34,10 +38,13 @@ function MentorLayout({
       <MatchingHeader />
       <Box
         component="main"
+        dir={dir}
+        lang={language}
         sx={{
           flex: 1,
           py: { xs: 3, sm: 4 },
           px: { xs: 2, sm: 3 },
+          direction: dir,
         }}
       >
         <Container maxWidth="md" disableGutters>
@@ -47,7 +54,13 @@ function MentorLayout({
                 <Button
                   component={RouterLink}
                   to={backTo}
-                  startIcon={<ArrowBackRoundedIcon />}
+                  startIcon={
+                    <ArrowBackRoundedIcon
+                      sx={{
+                        transform: dir === "rtl" ? "scaleX(-1)" : "none",
+                      }}
+                    />
+                  }
                   sx={{
                     mb: 1.5,
                     px: 0,
@@ -59,7 +72,7 @@ function MentorLayout({
                     },
                   }}
                 >
-                  {backLabel}
+                  {resolvedBackLabel}
                 </Button>
               )}
 
