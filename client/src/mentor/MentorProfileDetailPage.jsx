@@ -13,7 +13,7 @@ import {
 import MentorLayout from "./MentorLayout";
 import { getMentorById, requestMentorship } from "./mentorService";
 import { useAuth } from "../context/AuthContext";
-import { useMentorLanguage } from "./translations";
+import { useMentorLanguage, getMentorTopicLabel } from "./translations";
 
 const detailCardSx = {
   p: { xs: 2.25, sm: 3 },
@@ -248,7 +248,7 @@ function MentorProfileDetailPage() {
               {topics.map((topic) => (
                 <Chip
                   key={topic}
-                  label={topic}
+                  label={getMentorTopicLabel(topic, t)}
                   sx={{
                     borderRadius: "999px",
                     backgroundColor: "rgba(141, 216, 247, 0.22)",

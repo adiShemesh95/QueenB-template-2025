@@ -9,6 +9,14 @@ const translations = {
     mentorFallback: "Mentor",
     menteeFallback: "Mentee",
 
+    topicLabels: {
+      "Mock Interview": "Mock Interview",
+      "Career Planning": "Career Planning",
+      "Company Guidance": "Company Guidance",
+      "Resume Review": "Resume Review",
+      "Tech Skills": "Tech Skills",
+    },
+
     // Directory
     findMentorTitle: "Find a mentor",
     findMentorSubtitle:
@@ -126,6 +134,14 @@ const translations = {
     mentorFallback: "מנטורית",
     menteeFallback: "מנטית",
 
+    topicLabels: {
+      "Mock Interview": "ראיון מדומה",
+      "Career Planning": "תכנון קריירה",
+      "Company Guidance": "הכוונה בחברות",
+      "Resume Review": "סקירת קורות חיים",
+      "Tech Skills": "מיומנויות טכניות",
+    },
+
     findMentorTitle: "מציאת מנטורית",
     findMentorSubtitle: "עיינו במנטוריות פעילות ובקשו מפגש שמתאים למטרות שלכן.",
     becomeMentor: "להפוך למנטורית",
@@ -227,7 +243,130 @@ const translations = {
     cancelledMeetingLabel: (range) => `פגישה שבוטלה: ${range}`,
     meetingCancelled: "הפגישה שנקבעה בוטלה.",
   },
+  ar: {
+    home: "الرئيسية",
+    back: "رجوع",
+    mentors: "المرشدات",
+    mentorFallback: "مرشدة",
+    menteeFallback: "متدربة",
+
+    topicLabels: {
+      "Mock Interview": "مقابلة تجريبية",
+      "Career Planning": "تخطيط المسار المهني",
+      "Company Guidance": "إرشاد حول الشركات",
+      "Resume Review": "مراجعة السيرة الذاتية",
+      "Tech Skills": "مهارات تقنية",
+    },
+
+    findMentorTitle: "العثور على مرشدة",
+    findMentorSubtitle:
+      "تصفّحي المرشدات النشطات واطلبي جلسة تناسب أهدافك.",
+    becomeMentor: "كوني مرشدة",
+    loadingMentors: "جارٍ تحميل المرشدات…",
+    loadMentorsError: "تعذر تحميل المرشدات الآن. يرجى المحاولة مرة أخرى.",
+    emptyMentorsTitle: "لا توجد مرشدات بعد",
+    emptyMentorsBody: "كوني أول من ينشئ ملف مرشدة للمجتمع.",
+    viewProfile: "عرض الملف",
+
+    loadingProfile: "جارٍ تحميل الملف…",
+    mentorNotFound: "المرشدة غير موجودة.",
+    loadProfileError: "تعذر تحميل ملف هذه المرشدة.",
+    backToMentors: "العودة إلى المرشدات",
+    jobAtCompany: (job, company) => `${job} في ${company}`,
+    yearsExperience: (years) =>
+      `${years} ${years === 1 ? "سنة" : "سنوات"} من الخبرة`,
+    mentoringTopics: "مواضيع الإرشاد",
+    techStack: "المكدس التقني",
+    background: "الخلفية",
+    sessionLength: (minutes) => `مدة الجلسة: ${minutes} د`,
+    maxSessionsLabel: (count) => `الحد الأقصى للجلسات: ${count}`,
+    requestMentorship: "طلب إرشاد",
+    sendingRequest: "جارٍ إرسال الطلب…",
+    requestSentSuccess: "تم إرسال الطلب! تتبّعيه ضمن طلباتي.",
+    requestSendError: "تعذر إرسال طلب الإرشاد. يرجى المحاولة مرة أخرى.",
+    viewRequests: "عرض الطلبات",
+    editMyMentorProfile: "تعديل ملف المرشدة الخاص بي",
+
+    becomeMentorTitle: "كوني مرشدة",
+    editMentorTitle: "تعديل ملف المرشدة",
+    becomeMentorSubtitle:
+      "شاركي خبرتك حتى تتمكّن المتدربات من إيجاد المطابقة المناسبة.",
+    jobTitle: "المسمى الوظيفي",
+    company: "الشركة",
+    yearsOfExperience: "سنوات الخبرة",
+    sessionDurationMinutes: "مدة الجلسة (بالدقائق)",
+    maxSessions: "الحد الأقصى للجلسات",
+    techStackField: "المكدس التقني",
+    techStackHelper: "مهارات مفصولة بفواصل (مثل React, Node.js)",
+    profilePictureUrl: "رابط صورة الملف الشخصي",
+    profilePictureHelper: "الصقي رابط صورة بأسلوب LinkedIn (اختياري)",
+    backgroundField: "الخلفية",
+    showInDirectory: "إظهار ملفي في دليل المرشدات",
+    jobRequired: "المسمى الوظيفي مطلوب.",
+    companyRequired: "الشركة مطلوبة.",
+    topicsRequired: "اختاري موضوعًا واحدًا على الأقل.",
+    wholeNumber: "أدخلي عددًا صحيحًا.",
+    profileUpdated: "تم تحديث ملف المرشدة الخاص بك.",
+    profileLive: "ملف المرشدة الخاص بك نشط!",
+    saveProfileError: "تعذر حفظ ملف المرشدة. يرجى المحاولة مرة أخرى.",
+    saving: "جارٍ الحفظ…",
+    saveChanges: "حفظ التغييرات",
+    publishProfile: "نشر ملف المرشدة",
+
+    inboxTitle: "صندوق المرشدة",
+    inboxSubtitle: "راجعي الطلبات الواردة، واقترحي مواعيد اجتماع، أو ارفضي.",
+    filterAria: "تصفية طلبات المرشدة حسب الحالة",
+    filters: {
+      [FILTER_ALL]: "الكل",
+      [REQUEST_STATUS.PENDING_MENTOR]: "في انتظار المرشدة",
+      [REQUEST_STATUS.PENDING_MENTEE]: "في انتظار المتدربة",
+      [REQUEST_STATUS.MATCHED]: "تمت المطابقة",
+      [REQUEST_STATUS.REJECTED]: "مرفوض",
+      [REQUEST_STATUS.CANCELLED]: "ملغى",
+    },
+    loadingRequests: "جارٍ تحميل الطلبات…",
+    loadRequestsError: "تعذر تحميل طلبات المرشدة الآن.",
+    emptyRequestsTitle: "لا توجد طلبات بعد",
+    emptyRequestsBody:
+      "عندما تطلب المتدربات جلسة معك، ستظهر هنا.",
+    emptyFilterTitle: "لا توجد طلبات في هذه التصفية",
+    emptyFilterBody: "جرّبي حالة أخرى، أو اختاري الكل.",
+    requestedOn: (date) => `طُلب في ${date}`,
+    reject: "رفض",
+    proposedTimes: "المواعيد المقترحة",
+    offerTimeSlots: "اقتراح مواعيد",
+    startSlot: (n) => `البداية ${n}`,
+    endSlot: (n) => `النهاية ${n}`,
+    removeDraftSlot: (n) => `إزالة مسودة الموعد ${n}`,
+    addStartTime: "أضيفي وقت بداية واحدًا على الأقل.",
+    sending: "جارٍ الإرسال…",
+    sendProposedTimes: "إرسال المواعيد المقترحة",
+    addAnotherSlot: "إضافة موعد آخر",
+    waitingForMenteePick: "في انتظار أن تختار المتدربة موعدًا.",
+    meetingLabel: (range) => `اجتماع: ${range}`,
+    requestDeclined: "تم رفض الطلب.",
+    rejectError: "تعذر رفض هذا الطلب.",
+    slotsSentSuccess: "تم إرسال المواعيد إلى المتدربة.",
+    slotsSendError: "تعذر إرسال المواعيد. يرجى المحاولة مرة أخرى.",
+    requestReschedule: "طلب إعادة جدولة",
+    rescheduleSuccess: "بدأت إعادة الجدولة. اقترحي مواعيد جديدة أدناه.",
+    rescheduleError: "تعذر طلب إعادة الجدولة.",
+    cancelMeeting: "إلغاء الاجتماع",
+    cancelMeetingSuccess: "تم إلغاء الاجتماع المطابق.",
+    cancelMeetingError: "تعذر إلغاء هذا الاجتماع.",
+    cancelMeetingConfirmTitle: "إلغاء هذا الاجتماع؟",
+    cancelMeetingConfirmBody:
+      "يؤدي هذا إلى إلغاء الاجتماع المطابق نهائيًا. يمكن للمتدربة طلب الإرشاد معك مرة أخرى لاحقًا.",
+    cancelMeetingConfirmAction: "تأكيد",
+    cancelMeetingConfirmDismiss: "إلغاء",
+    cancelledMeetingLabel: (range) => `اجتماع ملغى: ${range}`,
+    meetingCancelled: "تم إلغاء هذا الاجتماع المطابق.",
+  },
 };
+
+export function getMentorTopicLabel(topic, t) {
+  return t?.topicLabels?.[topic] || topic;
+}
 
 export function useMentorLanguage() {
   const { language, dir } = useMatchingLanguage();

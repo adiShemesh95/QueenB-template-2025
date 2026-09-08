@@ -22,7 +22,7 @@ import {
   getMyMentorProfile,
   saveMentorProfile,
 } from "./mentorService";
-import { useMentorLanguage } from "./translations";
+import { useMentorLanguage, getMentorTopicLabel } from "./translations";
 import appTheme from "../theme";
 
 const formCardSx = {
@@ -374,7 +374,7 @@ function BecomeMentorPage() {
                       }}
                     />
                   }
-                  label={topic}
+                  label={getMentorTopicLabel(topic, t)}
                   sx={{ mr: 2, color: "#4A5568" }}
                 />
               ))}

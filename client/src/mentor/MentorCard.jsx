@@ -2,7 +2,7 @@ import React from "react";
 import { Avatar, Box, Button, Chip, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
-import { useMentorLanguage } from "./translations";
+import { useMentorLanguage, getMentorTopicLabel } from "./translations";
 
 function getInitials(name) {
   const parts = String(name || "")
@@ -120,7 +120,7 @@ function MentorCard({ mentor }) {
           {topics.map((topic) => (
             <Chip
               key={topic}
-              label={topic}
+              label={getMentorTopicLabel(topic, t)}
               size="small"
               sx={{
                 borderRadius: "999px",
