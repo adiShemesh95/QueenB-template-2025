@@ -8,7 +8,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,9 +40,19 @@ function hasFieldErrors(errors) {
   return Object.values(errors).some(Boolean);
 }
 
+/** Safe Admin return path from router state (Admin entry flow only). */
+function getAdminReturnPath(from) {
+  if (typeof from === "string" && from.startsWith("/admin")) {
+    return from;
+  }
+  return "/admin";
+}
+
 function SignInPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const adminIntent = location.state?.adminIntent === true;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,12 +79,26 @@ function SignInPage() {
 
     setSubmitting(true);
     try {
-      await login({
+      const data = await login({
         email: trimmedEmail,
         password,
       });
       setPassword("");
-      navigate("/dashboard");
+
+      // Admin entry (/admin → login) preserves intent via location.state.
+      // GuestRoute also honors adminIntent when login() setUser() re-renders
+      // the /login guard — both must agree so /dashboard cannot win the race.
+      if (adminIntent) {
+        if (data?.user?.isAdmin === true) {
+          navigate(getAdminReturnPath(location.state?.from), { replace: true });
+        } else {
+          // Land on /admin so AdminRoute can show "Admin access required"
+          // without treating this as a normal-user dashboard login.
+          navigate("/admin", { replace: true });
+        }
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       const apiError = err?.response?.data?.error;
       const code = apiError?.code;
@@ -153,7 +177,9 @@ function SignInPage() {
         <Typography
           sx={{ color: "#6B7280", textAlign: "center", mt: -0.5, mb: 0.5 }}
         >
-          Welcome back to Queens Match
+          {adminIntent
+            ? "Sign in to continue to Admin"
+            : "Welcome back to Queens Match"}
         </Typography>
 
         {generalError ? (
@@ -218,17 +244,20 @@ function SignInPage() {
           )}
         </Button>
 
-        <Typography sx={{ textAlign: "center", color: "#6B7280", mt: 0.5 }}>
-          Don&apos;t have an account?{" "}
-          <Link
-            component={RouterLink}
-            to="/register"
-            underline="hover"
-            sx={{ color: "#F75F8A", fontWeight: 600 }}
-          >
-            Sign Up
-          </Link>
-        </Typography>
+        {/* Public Sign Up is for normal users only — Admin is isAdmin capability, not self-registration. */}
+        {!adminIntent ? (
+          <Typography sx={{ textAlign: "center", color: "#6B7280", mt: 0.5 }}>
+            Don&apos;t have an account?{" "}
+            <Link
+              component={RouterLink}
+              to="/register"
+              underline="hover"
+              sx={{ color: "#F75F8A", fontWeight: 600 }}
+            >
+              Sign Up
+            </Link>
+          </Typography>
+        ) : null}
 
         <Button
           component={RouterLink}

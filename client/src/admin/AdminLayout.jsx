@@ -1,14 +1,16 @@
 import React from "react";
 import {
   AppBar,
+  Avatar,
   Box,
   Button,
   Container,
   Toolbar,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Logo from "../components/Logo";
 
 const pageBackground = `
   radial-gradient(ellipse 80% 55% at 0% 0%, rgba(141, 216, 247, 0.35) 0%, transparent 55%),
@@ -26,8 +28,9 @@ const navItems = [
 
 // Admin Alerts are intentionally omitted — owned by another teammate.
 
-// NavLink applies the "active" class; MUI sx targets it for highlight styles.
-const navButtonSx = {
+// Mirrors AppNavbar navPillSx so Admin keeps the same active/hover language
+// without refactoring the shared authenticated navbar.
+const navPillSx = (active) => ({
   textTransform: "none",
   fontWeight: 600,
   fontSize: { xs: "0.8rem", sm: "0.875rem" },
@@ -35,32 +38,54 @@ const navButtonSx = {
   py: 0.75,
   borderRadius: 999,
   minWidth: 0,
-  color: "#07142D",
-  backgroundColor: "transparent",
-  "&.active": {
-    color: "#D93F68",
-    backgroundColor: "rgba(247, 95, 138, 0.12)",
-  },
+  color: active ? "#D93F68" : "#07142D",
+  backgroundColor: active ? "rgba(247, 95, 138, 0.12)" : "transparent",
   "&:hover": {
     backgroundColor: "rgba(247, 95, 138, 0.1)",
     color: "#D93F68",
   },
-};
+});
+
+function getUsernameInitials(username) {
+  const name = String(username || "").trim();
+  if (!name) return "?";
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function isAdminNavActive(pathname, to, end) {
+  if (end) return pathname === to;
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
 /**
  * Admin shell kept under client/src/admin so Admin navigation lives here
  * instead of expanding the shared AppNavbar (lower merge-conflict risk).
+ * Visual styling deliberately mirrors AppNavbar; behavior stays Admin-local.
  */
 function AdminLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = React.useState(false);
+
+  const username = user?.username || "";
+  const initials = getUsernameInitials(username);
 
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
       await logout();
-      navigate("/");
+      // Preserve Admin entry intent so re-login returns to /admin (or denies
+      // non-admins) instead of treating this as a normal-user logout.
+      navigate("/login", {
+        replace: true,
+        state: { adminIntent: true, from: "/admin" },
+      });
     } catch {
       setLoggingOut(false);
     }
@@ -78,38 +103,46 @@ function AdminLayout() {
       <AppBar
         position="sticky"
         elevation={0}
+        color="transparent"
         sx={{
-          backgroundColor: "rgba(255, 255, 255, 0.88)",
-          backdropFilter: "blur(10px)",
-          borderBottom: "1px solid rgba(7, 20, 45, 0.08)",
+          top: 0,
+          backgroundColor: "rgba(255, 255, 255, 0.72)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(7, 20, 45, 0.06)",
+          boxShadow: "0 4px 18px rgba(7, 20, 45, 0.04)",
           color: "#07142D",
         }}
       >
         <Toolbar
           sx={{
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 0.75, sm: 1 },
+            minHeight: { xs: 64, sm: 72 },
+            maxWidth: 1100,
+            width: "100%",
+            mx: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             gap: { xs: 1, sm: 2 },
             flexWrap: "wrap",
-            py: { xs: 1, sm: 0.5 },
-            minHeight: { xs: "auto", sm: 64 },
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mr: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              minWidth: 0,
+            }}
+          >
+            <Logo />
             <Typography
               component="span"
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: "0.95rem", sm: "1.05rem" },
-                color: "#07142D",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Queens Match
-            </Typography>
-            <Typography
-              component="span"
+              aria-label="Admin mode"
               sx={{
                 fontWeight: 700,
-                fontSize: "0.7rem",
+                fontSize: "0.65rem",
                 px: 1,
                 py: 0.35,
                 borderRadius: 999,
@@ -117,6 +150,7 @@ function AdminLayout() {
                 color: "#D93F68",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
+                flexShrink: 0,
               }}
             >
               Admin
@@ -124,69 +158,107 @@ function AdminLayout() {
           </Box>
 
           <Box
-            component="nav"
-            aria-label="Admin"
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 0.5,
-              flex: 1,
-            }}
-          >
-            {navItems.map((item) => (
-              <Button
-                key={item.to}
-                component={NavLink}
-                to={item.to}
-                end={Boolean(item.end)}
-                sx={navButtonSx}
-              >
-                {item.label}
-              </Button>
-            ))}
-          </Box>
-
-          <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1,
-              ml: "auto",
+              gap: { xs: 0.5, sm: 1 },
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+              ml: { xs: 0, sm: "auto" },
             }}
           >
-            <Typography
+            <Box
+              component="nav"
+              aria-label="Admin"
               sx={{
-                display: { xs: "none", sm: "block" },
-                color: "#4A5568",
-                fontSize: "0.875rem",
-                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 0.25,
+                flexWrap: "wrap",
+                p: 0.35,
+                borderRadius: 999,
+                backgroundColor: "rgba(255, 255, 255, 0.55)",
+                border: "1px solid rgba(247, 95, 138, 0.1)",
               }}
             >
-              {user?.username}
-            </Typography>
-            <Button
-              component={RouterLink}
-              to="/dashboard"
+              {navItems.map((item) => {
+                const active = isAdminNavActive(
+                  location.pathname,
+                  item.to,
+                  Boolean(item.end)
+                );
+                return (
+                  <Button
+                    key={item.to}
+                    component={RouterLink}
+                    to={item.to}
+                    sx={navPillSx(active)}
+                  >
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </Box>
+
+            <Box
               sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                color: "#4A5568",
-                fontSize: "0.85rem",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                py: 0.5,
+                px: { xs: 0.75, sm: 1.25 },
+                borderRadius: 999,
+                backgroundColor: "rgba(247, 95, 138, 0.08)",
               }}
             >
-              Exit Admin
-            </Button>
+              <Avatar
+                alt=""
+                sx={{
+                  width: 32,
+                  height: 32,
+                  bgcolor: "rgba(247, 95, 138, 0.18)",
+                  color: "#F75F8A",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                }}
+              >
+                {initials}
+              </Avatar>
+              <Typography
+                sx={{
+                  display: { xs: "none", sm: "block" },
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#07142D",
+                  maxWidth: 120,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {username}
+              </Typography>
+            </Box>
+
             <Button
               onClick={handleLogout}
               disabled={loggingOut}
+              size="small"
+              variant="outlined"
               sx={{
                 textTransform: "none",
                 fontWeight: 600,
-                color: "#D93F68",
-                fontSize: "0.85rem",
+                borderRadius: 999,
+                px: 1.75,
+                borderColor: "#F75F8A",
+                color: "#F75F8A",
+                "&:hover": {
+                  borderColor: "#E04872",
+                  backgroundColor: "rgba(247, 95, 138, 0.06)",
+                },
               }}
             >
-              {loggingOut ? "Logging out…" : "Logout"}
+              {loggingOut ? "Logging out..." : "Logout"}
             </Button>
           </Box>
         </Toolbar>

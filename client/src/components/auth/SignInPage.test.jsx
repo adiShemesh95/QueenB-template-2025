@@ -6,6 +6,7 @@ import SignInPage from "./SignInPage";
 
 const mockLogin = jest.fn();
 const mockNavigate = jest.fn();
+const mockLocationState = { current: null };
 
 jest.mock("../../context/AuthContext", () => ({
   useAuth: () => ({
@@ -24,6 +25,7 @@ jest.mock("react-router-dom", () => {
   return {
     Link: MockLink,
     useNavigate: () => mockNavigate,
+    useLocation: () => ({ state: mockLocationState.current }),
   };
 });
 
@@ -45,6 +47,7 @@ describe("SignInPage", () => {
   beforeEach(() => {
     mockLogin.mockReset();
     mockNavigate.mockReset();
+    mockLocationState.current = null;
   });
 
   test("renders Sign In form", () => {
@@ -56,6 +59,28 @@ describe("SignInPage", () => {
       "href",
       "/register"
     );
+  });
+
+  test("normal login DOES render Sign Up", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: /sign up/i })).toHaveAttribute(
+      "href",
+      "/register"
+    );
+    expect(screen.getByText(/don't have an account/i)).toBeInTheDocument();
+  });
+
+  test("Admin-intent login does NOT render Sign Up", () => {
+    mockLocationState.current = {
+      adminIntent: true,
+      from: "/admin",
+    };
+    renderPage();
+    expect(
+      screen.getByText(/sign in to continue to admin/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /sign up/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/don't have an account/i)).not.toBeInTheDocument();
   });
 
   test("shows validation for empty fields", async () => {
@@ -74,7 +99,7 @@ describe("SignInPage", () => {
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
-  test("successful login navigates to dashboard", async () => {
+  test("successful normal login navigates to dashboard", async () => {
     mockLogin.mockResolvedValue({
       user: { id: 1, email: "ok@example.com", username: "ok_user" },
     });
@@ -90,6 +115,59 @@ describe("SignInPage", () => {
       password: "password1",
     });
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  test("Admin login intent returns Admin to /admin and does not show Sign Up", async () => {
+    mockLocationState.current = {
+      adminIntent: true,
+      from: "/admin/calendar",
+    };
+    mockLogin.mockResolvedValue({
+      user: {
+        id: 1,
+        email: "admin@example.com",
+        username: "admin",
+        isAdmin: true,
+      },
+    });
+    renderPage();
+    expect(
+      screen.getByText(/sign in to continue to admin/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /sign up/i })).not.toBeInTheDocument();
+    await fillValidForm({
+      email: "admin@example.com",
+      password: "password1",
+    });
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/admin/calendar", {
+        replace: true,
+      })
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  test("non-admin login from Admin flow is denied without dashboard redirect", async () => {
+    mockLocationState.current = {
+      adminIntent: true,
+      from: "/admin",
+    };
+    mockLogin.mockResolvedValue({
+      user: {
+        id: 2,
+        email: "user@example.com",
+        username: "regular",
+        isAdmin: false,
+      },
+    });
+    renderPage();
+    await fillValidForm();
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true })
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard");
   });
 
   test("shows generic message for INVALID_CREDENTIALS", async () => {
