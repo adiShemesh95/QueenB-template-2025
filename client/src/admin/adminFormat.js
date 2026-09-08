@@ -107,3 +107,24 @@ export function formatAdminDuration(start, end) {
   if (rem === 0) return hours === 1 ? "1 hour" : `${hours} hours`;
   return `${hours}h ${rem}m`;
 }
+
+/**
+ * Presentation-only display name for Admin calendar / details.
+ * Prefer a full-name field when present; otherwise show username with
+ * underscores replaced by spaces. Does not mutate stored usernames.
+ */
+export function formatAdminDisplayName(personOrName) {
+  if (personOrName == null || personOrName === "") return "";
+  if (typeof personOrName === "object") {
+    const fullName =
+      personOrName.fullName ||
+      personOrName.full_name ||
+      personOrName.name ||
+      "";
+    if (String(fullName).trim()) return String(fullName).trim();
+    const username = personOrName.username;
+    if (username == null || username === "") return "";
+    return String(username).replace(/_/g, " ");
+  }
+  return String(personOrName).replace(/_/g, " ");
+}

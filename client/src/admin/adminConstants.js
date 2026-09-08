@@ -8,6 +8,8 @@
  * meeting is cancelled). Future lifecycle values (attendance, meeting
  * outcome, feedback completed) are intentionally omitted.
  */
+import { formatAdminDisplayName } from "./adminFormat";
+
 export const ADMIN_MATCHING_STATUSES = [
   "PENDING_MENTOR",
   "PENDING_MENTEE",
@@ -107,8 +109,10 @@ export function toAdminCalendarEvents(matchings) {
         matching.selectedSlot.start !== ""
     )
     .map((matching) => {
-      const mentorName = matching.mentor?.username || "Mentor";
-      const menteeName = matching.mentee?.username || "Mentee";
+      const mentorName =
+        formatAdminDisplayName(matching.mentor) || "Mentor";
+      const menteeName =
+        formatAdminDisplayName(matching.mentee) || "Mentee";
       return {
         id: matching.id,
         status: matching.status,

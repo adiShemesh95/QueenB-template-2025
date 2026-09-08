@@ -24,6 +24,7 @@ import {
 import AdminStatusChip from "./AdminStatusChip";
 import {
   formatAdminClockRange,
+  formatAdminDisplayName,
   formatAdminDuration,
   formatAdminLongDate,
 } from "./adminFormat";
@@ -36,8 +37,21 @@ const paperSx = {
   boxShadow: "0 8px 24px rgba(7, 20, 45, 0.05)",
 };
 
-/** Compact calendar day cells — avoid tall stretched cards. */
-const DAY_CELL_MIN_HEIGHT = { xs: 64, sm: 72, md: 76 };
+/** Compact minimum day height — weeks grow when a day has more events. */
+const DAY_CELL_MIN_HEIGHT = { xs: 72, sm: 80, md: 84 };
+
+const eventTitleSx = {
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+  overflowWrap: "anywhere",
+  fontSize: { xs: "0.62rem", sm: "0.68rem", md: "0.7rem" },
+  fontWeight: 700,
+  lineHeight: 1.25,
+};
 
 const MONTH_LOCALES = {
   en: "en-GB",
@@ -285,14 +299,18 @@ function MeetingDetailsContent({ event, onClose, t, language, dir }) {
         </DetailBlock>
 
         <DetailBlock label={t.colMentor}>
-          <Box>{event.mentor?.username || t.emDash}</Box>
+          <Box>
+            {formatAdminDisplayName(event.mentor) || t.emDash}
+          </Box>
           <Typography sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
             {event.mentor?.email || t.emDash}
           </Typography>
         </DetailBlock>
 
         <DetailBlock label={t.colMentee}>
-          <Box>{event.mentee?.username || t.emDash}</Box>
+          <Box>
+            {formatAdminDisplayName(event.mentee) || t.emDash}
+          </Box>
           <Typography sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
             {event.mentee?.email || t.emDash}
           </Typography>
@@ -624,6 +642,9 @@ function AdminCalendarPage() {
                 width: "100%",
                 display: "grid",
                 gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                // Auto rows: each week grows with its busiest day; empty weeks stay compact.
+                gridAutoRows: "minmax(0, auto)",
+                alignItems: "stretch",
                 // 1px gap + shared border color = clean cell lines without tall cards
                 gap: "1px",
                 backgroundColor: "rgba(7, 20, 45, 0.1)",
@@ -669,8 +690,9 @@ function AdminCalendarPage() {
                       position: "relative",
                       boxSizing: "border-box",
                       minHeight: DAY_CELL_MIN_HEIGHT,
-                      height: DAY_CELL_MIN_HEIGHT,
-                      overflow: "hidden",
+                      // No fixed height — CSS grid row stretches all 7 days equally.
+                      height: "auto",
+                      overflow: "visible",
                       borderRadius: 0,
                       backgroundColor: isToday
                         ? "rgba(247, 95, 138, 0.08)"
@@ -680,6 +702,7 @@ function AdminCalendarPage() {
                       p: 0.5,
                       display: "flex",
                       flexDirection: "column",
+                      gap: 0.35,
                     }}
                   >
                     <Typography
@@ -692,8 +715,7 @@ function AdminCalendarPage() {
                         lineHeight: 1.2,
                         px: 0.25,
                         pt: 0.1,
-                        // Keep the day number inside the cell box.
-                        position: "relative",
+                        flexShrink: 0,
                         color: isToday
                           ? "#D93F68"
                           : inCurrentMonth
@@ -705,12 +727,11 @@ function AdminCalendarPage() {
                     </Typography>
 
                     <Stack
-                      spacing={0.35}
+                      spacing={0.4}
                       sx={{
-                        flex: 1,
+                        flex: "1 1 auto",
                         minHeight: 0,
-                        overflow: "hidden",
-                        mt: 0.25,
+                        width: "100%",
                       }}
                     >
                       {dayEvents.map((event) => {
@@ -742,20 +763,21 @@ function AdminCalendarPage() {
                             sx={{
                               display: "block",
                               width: "100%",
+                              maxWidth: "100%",
                               textAlign: "left",
                               cursor: "pointer",
                               border: isSelected
                                 ? `1px solid ${colors.border}`
                                 : "1px solid transparent",
                               px: 0.5,
-                              py: 0.25,
+                              py: 0.35,
                               borderRadius: 0.75,
                               backgroundColor: colors.bg,
                               color: colors.color,
                               fontFamily: "inherit",
-                              lineHeight: 1.2,
-                              overflow: "hidden",
+                              lineHeight: 1.25,
                               boxShadow: `inset 2px 0 0 ${colors.dot}`,
+                              flexShrink: 0,
                               "&:hover": {
                                 filter: "brightness(0.97)",
                               },
@@ -765,29 +787,25 @@ function AdminCalendarPage() {
                               },
                             }}
                           >
-                            <Box
-                              component="span"
-                              sx={{
-                                display: "block",
-                                fontSize: "0.6rem",
-                                fontWeight: 700,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
+                            <Box component="span" sx={eventTitleSx}>
                               {event.title}
                             </Box>
                             <Box
                               component="span"
                               sx={{
                                 display: "block",
-                                fontSize: "0.55rem",
+                                fontSize: {
+                                  xs: "0.55rem",
+                                  sm: "0.58rem",
+                                  md: "0.6rem",
+                                },
                                 fontWeight: 600,
                                 opacity: 0.9,
+                                lineHeight: 1.2,
+                                mt: 0.15,
+                                whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
                               }}
                             >
                               {clock}

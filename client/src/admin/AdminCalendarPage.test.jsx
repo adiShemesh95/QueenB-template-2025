@@ -13,6 +13,7 @@ import {
 } from "./adminConstants";
 import {
   formatAdminClockRange,
+  formatAdminDisplayName,
   formatAdminDuration,
   formatAdminLongDate,
 } from "./adminFormat";
@@ -110,6 +111,21 @@ describe("toAdminCalendarEvents", () => {
       status: "CANCELLED",
       title: "mentorA ↔ menteeX",
     });
+  });
+
+  test("formats underscored usernames as readable display names in titles", () => {
+    const events = toAdminCalendarEvents([
+      {
+        ...scheduledMatching,
+        mentor: { id: 1, username: "Rawan_Saleh", email: "r@ex.com" },
+        mentee: { id: 3, username: "Tala_Khoury", email: "t@ex.com" },
+      },
+    ]);
+    expect(events[0].title).toBe("Rawan Saleh ↔ Tala Khoury");
+    expect(formatAdminDisplayName("Rawan_Saleh")).toBe("Rawan Saleh");
+    expect(formatAdminDisplayName({ username: "Tala_Khoury" })).toBe(
+      "Tala Khoury"
+    );
   });
 });
 
@@ -553,6 +569,82 @@ describe("AdminCalendarPage", () => {
     expect(
       screen.getByRole("button", { name: /menteeAfternoon/i })
     ).toBeInTheDocument();
+  });
+
+  test("five meetings on the same day all remain visible without +N more", async () => {
+    const day = new Date();
+    day.setHours(9, 0, 0, 0);
+    const many = Array.from({ length: 5 }, (_, index) => {
+      const start = new Date(day);
+      start.setHours(9 + index, 0, 0, 0);
+      return {
+        ...scheduledMatching,
+        id: 300 + index,
+        mentor: {
+          id: 1,
+          username: `Mentor_One`,
+          email: "mentor@ex.com",
+        },
+        mentee: {
+          id: 10 + index,
+          username: `Mentee_Num${index + 1}`,
+          email: `m${index}@ex.com`,
+        },
+        selectedSlot: {
+          id: 20 + index,
+          start: start.toISOString(),
+          end: new Date(start.getTime() + 45 * 60 * 1000).toISOString(),
+        },
+      };
+    });
+
+    adminService.getAdminMatchings.mockResolvedValue(many);
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminCalendarPage />
+      </MatchingLanguageProvider>
+    );
+
+    for (let i = 1; i <= 5; i += 1) {
+      expect(
+        await screen.findByRole("button", {
+          name: new RegExp(`Mentor One ↔ Mentee Num${i}`, "i"),
+        })
+      ).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/\+\d+\s*more/i)).not.toBeInTheDocument();
+  });
+
+  test("Meeting Details shows spaced display names for underscored usernames", async () => {
+    adminService.getAdminMatchings.mockResolvedValue([
+      {
+        ...scheduledMatching,
+        mentor: { id: 1, username: "Rawan_Saleh", email: "r@ex.com" },
+        mentee: { id: 3, username: "Tala_Khoury", email: "t@ex.com" },
+      },
+    ]);
+
+    render(
+      <MatchingLanguageProvider>
+        <AdminCalendarPage />
+      </MatchingLanguageProvider>
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /Rawan Saleh ↔ Tala Khoury/i,
+      })
+    );
+
+    const panelHeading = await screen.findByRole("heading", {
+      name: /meeting details/i,
+    });
+    const panel = panelHeading.closest("aside") || panelHeading.parentElement;
+    expect(within(panel).getAllByText("Rawan Saleh").length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText("Tala Khoury").length).toBeGreaterThan(0);
+    expect(within(panel).queryByText("Rawan_Saleh")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Tala_Khoury")).not.toBeInTheDocument();
   });
 
   test("previous and next month scheduled meetings appear when navigating", async () => {
