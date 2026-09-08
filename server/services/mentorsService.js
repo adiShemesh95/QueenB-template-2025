@@ -1,5 +1,8 @@
 const pool = require("../db");
-const { requestReschedule } = require("./matchingService");
+const {
+  requestReschedule,
+  cancelMatchedMeeting,
+} = require("./matchingService");
 
 const MENTOR_TOPIC_OPTIONS = [
   "Mock Interview",
@@ -477,6 +480,13 @@ async function requestRescheduleAsMentor(matchingId, mentorUserId) {
   return requestReschedule(matchingId, { mentorId: mentorUserId });
 }
 
+/**
+ * Mentor cancels a MATCHED meeting (shared matching rules; keeps slot history).
+ */
+async function cancelMatchedMeetingAsMentor(matchingId, mentorUserId) {
+  return cancelMatchedMeeting(matchingId, { mentorId: mentorUserId });
+}
+
 module.exports = {
   MENTOR_TOPIC_OPTIONS,
   toPublicMentor,
@@ -489,4 +499,5 @@ module.exports = {
   addSlotsToRequest,
   rejectRequest,
   requestRescheduleAsMentor,
+  cancelMatchedMeetingAsMentor,
 };

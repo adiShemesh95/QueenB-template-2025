@@ -37,11 +37,13 @@ async function userExists(userId) {
   return result.rowCount > 0;
 }
 
+// CANCELLED and REJECTED are terminal and must not block a new request.
 const ACTIVE_STATUSES = ["PENDING_MENTOR", "PENDING_MENTEE", "MATCHED"];
 
 /**
  * Finds an active matching request between a mentee and mentor, if any.
- * Active statuses: PENDING_MENTOR, PENDING_MENTEE, MATCHED (not REJECTED).
+ * Active statuses: PENDING_MENTOR, PENDING_MENTEE, MATCHED
+ * (not REJECTED or CANCELLED).
  *
  * @param {number} menteeId
  * @param {number} mentorId
@@ -430,6 +432,65 @@ async function requestReschedule(matchingId, actor = {}) {
   }
 }
 
+/**
+ * Fully cancel a MATCHED meeting (mentee or mentor).
+ * Keeps selected_slot_id, is_selected, and slot rows for history.
+ * Does not restart scheduling (unlike requestReschedule).
+ *
+ * @param {number} matchingId
+ * @param {{ menteeId?: number, mentorId?: number }} actor
+ * @returns {Promise<{ matching: object } | { error: string }>}
+ */
+async function cancelMatchedMeeting(matchingId, actor = {}) {
+  const menteeId = actor.menteeId != null ? Number(actor.menteeId) : null;
+  const mentorId = actor.mentorId != null ? Number(actor.mentorId) : null;
+
+  if (
+    (menteeId == null && mentorId == null) ||
+    (menteeId != null && mentorId != null)
+  ) {
+    return { error: "NOT_FOUND" };
+  }
+
+  const ownershipSql =
+    menteeId != null
+      ? `id = $1 AND mentee_id = $2`
+      : `id = $1 AND mentor_id = $2`;
+  const actorId = menteeId != null ? menteeId : mentorId;
+
+  const matchingResult = await pool.query(
+    `SELECT *
+     FROM matching
+     WHERE ${ownershipSql}`,
+    [matchingId, actorId]
+  );
+  const matching = matchingResult.rows[0];
+
+  if (!matching) {
+    return { error: "NOT_FOUND" };
+  }
+
+  if (matching.status !== "MATCHED") {
+    return { error: "INVALID_STATUS" };
+  }
+
+  const result = await pool.query(
+    `UPDATE matching
+     SET status = 'CANCELLED',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE ${ownershipSql}
+       AND status = 'MATCHED'
+     RETURNING *`,
+    [matchingId, actorId]
+  );
+
+  if (!result.rows[0]) {
+    return { error: "INVALID_STATUS" };
+  }
+
+  return { matching: await enrichMatching(result.rows[0]) };
+}
+
 module.exports = {
   createMatching,
   userExists,
@@ -440,4 +501,5 @@ module.exports = {
   cancelMatching,
   selectSlot,
   requestReschedule,
+  cancelMatchedMeeting,
 };

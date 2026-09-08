@@ -3,6 +3,7 @@ export const REQUEST_STATUS = {
   PENDING_MENTEE: "PENDING_MENTEE",
   MATCHED: "MATCHED",
   REJECTED: "REJECTED",
+  CANCELLED: "CANCELLED",
 };
 
 export const STATUS_LABELS = {
@@ -10,6 +11,7 @@ export const STATUS_LABELS = {
   [REQUEST_STATUS.PENDING_MENTEE]: "Choose a time",
   [REQUEST_STATUS.MATCHED]: "Matched",
   [REQUEST_STATUS.REJECTED]: "Declined",
+  [REQUEST_STATUS.CANCELLED]: "Cancelled",
 };
 
 /** Chip colors aligned with the QueenB palette */
@@ -27,6 +29,10 @@ export const STATUS_COLORS = {
     color: "#2F855A",
   },
   [REQUEST_STATUS.REJECTED]: {
+    bg: "rgba(113, 128, 150, 0.14)",
+    color: "#4A5568",
+  },
+  [REQUEST_STATUS.CANCELLED]: {
     bg: "rgba(113, 128, 150, 0.14)",
     color: "#4A5568",
   },
@@ -51,5 +57,9 @@ export const STATUS_FILTER_OPTIONS = [
   {
     value: REQUEST_STATUS.REJECTED,
     label: STATUS_LABELS[REQUEST_STATUS.REJECTED],
+  },
+  {
+    value: REQUEST_STATUS.CANCELLED,
+    label: STATUS_LABELS[REQUEST_STATUS.CANCELLED],
   },
 ];

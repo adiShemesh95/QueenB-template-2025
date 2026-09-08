@@ -32,6 +32,7 @@ const translations = {
       [REQUEST_STATUS.PENDING_MENTEE]: "Choose a time",
       [REQUEST_STATUS.MATCHED]: "Matched",
       [REQUEST_STATUS.REJECTED]: "Declined",
+      [REQUEST_STATUS.CANCELLED]: "Cancelled",
     },
     loadingRequests: "Loading requests…",
     loadingRequest: "Loading request…",
@@ -63,6 +64,10 @@ const translations = {
     rejectedTitle: "Mentor declined",
     rejectedDescription:
       "This mentor declined your mentoring request. You can explore other mentors and send a new request when you’re ready.",
+    cancelledTitle: "Meeting cancelled",
+    cancelledDescription:
+      "This matched meeting was cancelled. You can request mentoring with this mentor again when you’re ready.",
+    previousMeetingTime: "Previously scheduled time",
     selectSuccess:
       "Your preferred time was confirmed. The meeting is now scheduled.",
     selectError: "Could not confirm the selected time.",
@@ -72,6 +77,9 @@ const translations = {
     cancelRequest: "Cancel request",
     cancelSuccess: "This mentoring request was cancelled.",
     cancelError: "Could not cancel this request.",
+    cancelMeeting: "Cancel meeting",
+    cancelMeetingSuccess: "The matched meeting was cancelled.",
+    cancelMeetingError: "Could not cancel this meeting.",
     requestReschedule: "Request reschedule",
     rescheduleSuccess:
       "Reschedule requested. Your mentor will propose new times.",
@@ -107,6 +115,7 @@ const translations = {
       [REQUEST_STATUS.PENDING_MENTEE]: "בחירת מועד",
       [REQUEST_STATUS.MATCHED]: "הותאמה",
       [REQUEST_STATUS.REJECTED]: "נדחתה",
+      [REQUEST_STATUS.CANCELLED]: "בוטלה",
     },
     loadingRequests: "טוענת בקשות…",
     loadingRequest: "טוענת בקשה…",
@@ -135,6 +144,10 @@ const translations = {
     rejectedTitle: "המנטורית דחתה",
     rejectedDescription:
       "המנטורית דחתה את בקשת המנטורינג. אפשר לחפש מנטוריות אחרות ולשלוח בקשה חדשה כשתהיי מוכנה.",
+    cancelledTitle: "הפגישה בוטלה",
+    cancelledDescription:
+      "הפגישה שנקבעה בוטלה. אפשר לשלוח בקשת מנטורינג חדשה לאותה מנטורית כשתהיי מוכנה.",
+    previousMeetingTime: "המועד שנקבע בעבר",
     selectSuccess: "המועד המועדף אושר. הפגישה נקבעה.",
     selectError: "לא ניתן לאשר את המועד שנבחר.",
     moreTimesSuccess:
@@ -143,6 +156,9 @@ const translations = {
     cancelRequest: "ביטול הבקשה",
     cancelSuccess: "בקשת המנטורינג בוטלה.",
     cancelError: "לא ניתן לבטל את הבקשה.",
+    cancelMeeting: "ביטול הפגישה",
+    cancelMeetingSuccess: "הפגישה שנקבעה בוטלה.",
+    cancelMeetingError: "לא ניתן לבטל את הפגישה.",
     requestReschedule: "בקשת שינוי מועד",
     rescheduleSuccess: "בקשת שינוי המועד נשלחה. המנטורית תציע מועדים חדשים.",
     rescheduleError: "לא ניתן לבקש שינוי מועד.",

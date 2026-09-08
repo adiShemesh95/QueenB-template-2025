@@ -81,6 +81,14 @@ export async function requestReschedule(requestId) {
   return response.data;
 }
 
+/** POST /api/mentor-requests/:id/cancel-meeting */
+export async function cancelMatchedMeeting(requestId) {
+  const response = await mentorClient.post(
+    `/api/mentor-requests/${requestId}/cancel-meeting`
+  );
+  return response.data;
+}
+
 /** POST /api/matching — mentee requests this mentor (mentorId = users.id) */
 export async function requestMentorship(mentorUserId) {
   const response = await mentorClient.post("/api/matching", {

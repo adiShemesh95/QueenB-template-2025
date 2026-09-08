@@ -17,6 +17,7 @@ import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import MatchingLayout from "./MatchingLayout";
 import {
   cancelMatchingRequest,
+  cancelMatchedMeeting,
   getRequestById,
   requestMoreTimes,
   requestReschedule,
@@ -213,6 +214,21 @@ function RequestDetailsPage() {
       setFeedbackKey({ severity: "info", key: "rescheduleSuccess" });
     } catch (err) {
       setFeedbackKey({ severity: "error", key: "rescheduleError" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelMeeting = async () => {
+    if (!request) return;
+    try {
+      setActionLoading(true);
+      setFeedbackKey(null);
+      const updated = await cancelMatchedMeeting(request.id);
+      setRequest(updated);
+      setFeedbackKey({ severity: "info", key: "cancelMeetingSuccess" });
+    } catch (err) {
+      setFeedbackKey({ severity: "error", key: "cancelMeetingError" });
     } finally {
       setActionLoading(false);
     }
@@ -490,28 +506,90 @@ function RequestDetailsPage() {
                 {formatDateTime(request.meetingAt, language)}
               </Typography>
             </Box>
-            {!request.rescheduleUsed && (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1.5}
+              sx={{ mt: 2 }}
+            >
+              {!request.rescheduleUsed && (
+                <Button
+                  variant="outlined"
+                  disabled={actionLoading}
+                  onClick={handleRequestReschedule}
+                  sx={{
+                    px: 2.5,
+                    py: 1.15,
+                    borderRadius: 3,
+                    borderWidth: 1.5,
+                    borderColor: "#F75F8A",
+                    color: "#F75F8A",
+                    "&:hover": {
+                      borderWidth: 1.5,
+                      borderColor: "#E04872",
+                      backgroundColor: "rgba(247, 95, 138, 0.06)",
+                    },
+                  }}
+                >
+                  {t.requestReschedule}
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 disabled={actionLoading}
-                onClick={handleRequestReschedule}
+                onClick={handleCancelMeeting}
                 sx={{
-                  mt: 2,
                   px: 2.5,
                   py: 1.15,
                   borderRadius: 3,
                   borderWidth: 1.5,
-                  borderColor: "#F75F8A",
-                  color: "#F75F8A",
+                  borderColor: "rgba(113, 128, 150, 0.45)",
+                  color: "#4A5568",
                   "&:hover": {
                     borderWidth: 1.5,
-                    borderColor: "#E04872",
-                    backgroundColor: "rgba(247, 95, 138, 0.06)",
+                    borderColor: "#4A5568",
+                    backgroundColor: "rgba(113, 128, 150, 0.08)",
                   },
                 }}
               >
-                {t.requestReschedule}
+                {t.cancelMeeting}
               </Button>
+            </Stack>
+          </>
+        )}
+
+        {request.status === REQUEST_STATUS.CANCELLED && (
+          <>
+            <StatusBanner
+              tone="declined"
+              icon={<HighlightOffRoundedIcon />}
+              title={t.cancelledTitle}
+              description={t.cancelledDescription}
+            />
+            {request.meetingAt && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  backgroundColor: "rgba(113, 128, 150, 0.08)",
+                  border: "1px solid rgba(113, 128, 150, 0.25)",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: "0.8rem",
+                    color: "#4A5568",
+                    fontWeight: 600,
+                    mb: 0.5,
+                  }}
+                >
+                  {t.previousMeetingTime}
+                </Typography>
+                <Typography
+                  sx={{ fontWeight: 700, color: "#07142D", fontSize: "1.1rem" }}
+                >
+                  {formatDateTime(request.meetingAt, language)}
+                </Typography>
+              </Box>
             )}
           </>
         )}

@@ -5,6 +5,7 @@ const {
   addSlotsToRequest,
   rejectRequest,
   requestRescheduleAsMentor,
+  cancelMatchedMeetingAsMentor,
 } = require("../services/mentorsService");
 const {
   validationError,
@@ -27,6 +28,51 @@ router.get("/", async (req, res) => {
     return res
       .status(500)
       .json(internalError("Failed to fetch mentor requests."));
+  }
+});
+
+// POST /api/mentor-requests/:id/cancel-meeting - Mentor cancels a MATCHED meeting
+router.post("/:id/cancel-meeting", async (req, res) => {
+  try {
+    const mentorUserId = req.user?.id;
+    if (mentorUserId == null) {
+      return res.status(401).json(buildError("UNAUTHORIZED", "Unauthorized"));
+    }
+
+    const matchingId = Number(req.params.id);
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res
+        .status(400)
+        .json(validationError("Valid request id is required."));
+    }
+
+    const result = await cancelMatchedMeetingAsMentor(
+      matchingId,
+      Number(mentorUserId)
+    );
+
+    if (result.error === "NOT_FOUND") {
+      return res
+        .status(404)
+        .json(buildError("NOT_FOUND", "Mentorship request not found."));
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json(
+        buildError(
+          "INVALID_STATUS",
+          "Meeting cancellation is only available while the request is matched."
+        )
+      );
+    }
+
+    return res.status(200).json(result.matching);
+  } catch (err) {
+    console.error(
+      "POST /api/mentor-requests/:id/cancel-meeting failed:",
+      err.message
+    );
+    return res.status(500).json(internalError("Failed to cancel meeting."));
   }
 });
 
