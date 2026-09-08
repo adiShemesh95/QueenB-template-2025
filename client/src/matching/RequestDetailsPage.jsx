@@ -6,6 +6,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Radio,
   Stack,
   Typography,
@@ -125,6 +130,7 @@ function RequestDetailsPage() {
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackKey, setFeedbackKey] = useState(null);
+  const [cancelMeetingDialogOpen, setCancelMeetingDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +228,7 @@ function RequestDetailsPage() {
   const handleCancelMeeting = async () => {
     if (!request) return;
     try {
+      setCancelMeetingDialogOpen(false);
       setActionLoading(true);
       setFeedbackKey(null);
       const updated = await cancelMatchedMeeting(request.id);
@@ -536,7 +543,7 @@ function RequestDetailsPage() {
               <Button
                 variant="outlined"
                 disabled={actionLoading}
-                onClick={handleCancelMeeting}
+                onClick={() => setCancelMeetingDialogOpen(true)}
                 sx={{
                   px: 2.5,
                   py: 1.15,
@@ -603,6 +610,45 @@ function RequestDetailsPage() {
           />
         )}
       </Box>
+
+      <Dialog
+        open={cancelMeetingDialogOpen}
+        onClose={() => {
+          if (!actionLoading) setCancelMeetingDialogOpen(false);
+        }}
+        dir={dir}
+        aria-labelledby="cancel-meeting-dialog-title"
+      >
+        <DialogTitle id="cancel-meeting-dialog-title">
+          {t.cancelMeetingConfirmTitle}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t.cancelMeetingConfirmBody}</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setCancelMeetingDialogOpen(false)}
+            disabled={actionLoading}
+            sx={{ textTransform: "none", color: "#4A5568" }}
+          >
+            {t.cancelMeetingConfirmDismiss}
+          </Button>
+          <Button
+            onClick={handleCancelMeeting}
+            disabled={actionLoading}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              background: "linear-gradient(135deg, #FF6F91, #F75F8A)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #FF7A9A, #E04872)",
+              },
+            }}
+          >
+            {t.cancelMeetingConfirmAction}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MatchingLayout>
   );
 }

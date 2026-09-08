@@ -4,6 +4,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   Stack,
   TextField,
@@ -520,7 +525,7 @@ function MentorRequestCard({
 }
 
 function MentorDashboardPage() {
-  const { t } = useMentorLanguage();
+  const { t, dir } = useMentorLanguage();
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState(
@@ -530,6 +535,7 @@ function MentorDashboardPage() {
   const [error, setError] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [cancelConfirmRequestId, setCancelConfirmRequestId] = useState(null);
 
   const loadRequests = async () => {
     const data = await getMentorRequests();
@@ -631,6 +637,7 @@ function MentorDashboardPage() {
 
   const handleCancelMeeting = async (requestId) => {
     try {
+      setCancelConfirmRequestId(null);
       setActionLoadingId(requestId);
       setFeedback(null);
       await cancelMatchedMeeting(requestId);
@@ -765,13 +772,56 @@ function MentorDashboardPage() {
                   onReject={handleReject}
                   onProposeSlots={handleProposeSlots}
                   onRequestReschedule={handleRequestReschedule}
-                  onCancelMeeting={handleCancelMeeting}
+                  onCancelMeeting={setCancelConfirmRequestId}
                 />
               ))}
             </Stack>
           )}
         </>
       )}
+
+      <Dialog
+        open={cancelConfirmRequestId != null}
+        onClose={() => {
+          if (actionLoadingId == null) setCancelConfirmRequestId(null);
+        }}
+        dir={dir}
+        aria-labelledby="mentor-cancel-meeting-dialog-title"
+      >
+        <DialogTitle id="mentor-cancel-meeting-dialog-title">
+          {t.cancelMeetingConfirmTitle}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t.cancelMeetingConfirmBody}</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setCancelConfirmRequestId(null)}
+            disabled={actionLoadingId != null}
+            sx={{ textTransform: "none", color: "#4A5568" }}
+          >
+            {t.cancelMeetingConfirmDismiss}
+          </Button>
+          <Button
+            onClick={() => {
+              if (cancelConfirmRequestId != null) {
+                void handleCancelMeeting(cancelConfirmRequestId);
+              }
+            }}
+            disabled={actionLoadingId != null}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              background: "linear-gradient(135deg, #FF6F91, #F75F8A)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #FF7A9A, #E04872)",
+              },
+            }}
+          >
+            {t.cancelMeetingConfirmAction}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MentorLayout>
   );
 }
