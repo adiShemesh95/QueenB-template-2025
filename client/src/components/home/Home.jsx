@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box } from "@mui/material";
 import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
@@ -6,10 +6,11 @@ import FeaturesSection from "./FeaturesSection";
 import QuoteSection from "./QuoteSection";
 import BootcampFooter from "../BootcampFooter";
 import translations from "./translations";
+import { useMatchingLanguage } from "../../matching/MatchingLanguageContext";
 
 function Home() {
-  const [language, setLanguage] = useState("en");
-  const textDir = language === "he" ? "rtl" : "ltr";
+  const { language, setLanguage, dir } = useMatchingLanguage();
+  const textDir = dir;
   const t = translations[language] || translations.en;
 
   return (

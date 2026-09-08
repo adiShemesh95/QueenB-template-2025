@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SignUpPage from "./SignUpPage";
+import { MatchingLanguageProvider } from "../../matching/MatchingLanguageContext";
 
 const mockRegister = jest.fn();
 const mockNavigate = jest.fn();
@@ -28,7 +29,11 @@ jest.mock("react-router-dom", () => {
 });
 
 function renderPage() {
-  return render(<SignUpPage />);
+  return render(
+    <MatchingLanguageProvider>
+      <SignUpPage />
+    </MatchingLanguageProvider>
+  );
 }
 
 async function fillValidForm({

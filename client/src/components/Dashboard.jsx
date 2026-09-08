@@ -7,6 +7,8 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import AppNavbar from "./AppNavbar";
 import BootcampFooter from "./BootcampFooter";
 import { useAuth } from "../context/AuthContext";
+import { useMatchingLanguage } from "../matching/MatchingLanguageContext";
+import dashboardTranslations from "./dashboardTranslations";
 
 const pageBackground = `
   radial-gradient(ellipse 80% 55% at 0% 0%, rgba(141, 216, 247, 0.35) 0%, transparent 55%),
@@ -41,9 +43,17 @@ const glassCardSx = {
   },
 };
 
-function ActionCard({ to, icon, title, description, cta }) {
+function ActionCard({ to, icon, title, description, cta, textAlign, dir }) {
   return (
-    <Box component={RouterLink} to={to} sx={glassCardSx}>
+    <Box
+      component={RouterLink}
+      to={to}
+      sx={{
+        ...glassCardSx,
+        alignItems: textAlign === "right" ? "flex-end" : "flex-start",
+        textAlign: textAlign || "left",
+      }}
+    >
       <Box
         aria-hidden="true"
         sx={{
@@ -89,7 +99,14 @@ function ActionCard({ to, icon, title, description, cta }) {
 
       <Button
         component="span"
-        endIcon={<ArrowForwardRoundedIcon />}
+        endIcon={
+          <ArrowForwardRoundedIcon
+            sx={{
+              // Forward/CTA: point with reading flow (→ LTR, ← RTL)
+              transform: dir === "rtl" ? "scaleX(-1)" : "none",
+            }}
+          />
+        }
         sx={{
           px: 0,
           color: "#F75F8A",
@@ -105,6 +122,9 @@ function ActionCard({ to, icon, title, description, cta }) {
 
 function Dashboard() {
   const { user } = useAuth();
+  const { language, setLanguage, dir } = useMatchingLanguage();
+  const t = dashboardTranslations[language] || dashboardTranslations.en;
+  const textAlign = dir === "rtl" ? "right" : "left";
 
   return (
     <Box
@@ -115,16 +135,23 @@ function Dashboard() {
         background: pageBackground,
       }}
     >
-      <AppNavbar />
+      <AppNavbar
+        language={language}
+        onLanguageChange={setLanguage}
+        languageAria={t.languageAria}
+      />
 
       <Box
         component="main"
+        dir={dir}
+        lang={language}
         sx={{
           flex: 1,
           display: "flex",
           alignItems: "center",
           py: { xs: 4, sm: 6 },
           px: { xs: 2, sm: 3 },
+          direction: dir,
         }}
       >
         <Container maxWidth="md" disableGutters>
@@ -138,7 +165,7 @@ function Dashboard() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Welcome{user?.username ? `, ${user.username}` : ""}
+              {user?.username ? t.welcome(user.username) : t.welcomeGuest}
             </Typography>
             <Typography
               sx={{
@@ -150,8 +177,7 @@ function Dashboard() {
                 lineHeight: 1.55,
               }}
             >
-              Choose how you want to start — find a mentor, or share your
-              experience with mentees.
+              {t.subtitle}
             </Typography>
           </Box>
 
@@ -165,16 +191,20 @@ function Dashboard() {
             <ActionCard
               to="/mentors"
               icon={<GroupsRoundedIcon />}
-              title="Browse Mentors"
-              description="Explore mentor profiles, skills, and topics — then request a session that fits your goals."
-              cta="Find a mentor"
+              title={t.browseTitle}
+              description={t.browseDescription}
+              cta={t.browseCta}
+              textAlign={textAlign}
+              dir={dir}
             />
             <ActionCard
               to="/become-mentor"
               icon={<VolunteerActivismRoundedIcon />}
-              title="Become a Mentor"
-              description="Create your mentor profile, set your topics, and start receiving mentee requests."
-              cta="Create profile"
+              title={t.becomeTitle}
+              description={t.becomeDescription}
+              cta={t.becomeCta}
+              textAlign={textAlign}
+              dir={dir}
             />
           </Box>
         </Container>

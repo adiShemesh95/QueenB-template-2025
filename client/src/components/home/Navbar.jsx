@@ -18,7 +18,7 @@ function Navbar({ language, onLanguageChange, t }) {
       await logout();
       navigate("/");
     } catch {
-      setLogoutError("Unable to log out right now. Please try again.");
+      setLogoutError(t.logoutError);
     } finally {
       setLoggingOut(false);
     }
@@ -80,7 +80,7 @@ function Navbar({ language, onLanguageChange, t }) {
                 textTransform: "none",
               }}
             >
-              Dashboard
+              {t.dashboard}
             </Button>
             <Button
               component={RouterLink}
@@ -92,7 +92,7 @@ function Navbar({ language, onLanguageChange, t }) {
                 textTransform: "none",
               }}
             >
-              Mentors
+              {t.mentorsNav}
             </Button>
             <Button
               onClick={handleLogout}
@@ -111,7 +111,7 @@ function Navbar({ language, onLanguageChange, t }) {
                 },
               }}
             >
-              {loggingOut ? "Logging out..." : "Logout"}
+              {loggingOut ? t.loggingOut : t.logout}
             </Button>
             {logoutError ? (
               <Typography

@@ -13,7 +13,10 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useMatchingLanguage } from "../../matching/MatchingLanguageContext";
 import BootcampFooter from "../BootcampFooter";
+import LanguageSelector from "../home/LanguageSelector";
+import translations from "./translations";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -29,39 +32,39 @@ function utf8ByteLength(value) {
 
 // Live checklist + strength use these same rules as backend registration validation.
 // Backend remains the source of truth; this is UX feedback only.
-function getPasswordRequirements(password) {
+function getPasswordRequirements(password, t) {
   const value = typeof password === "string" ? password : "";
   return [
     {
       id: "minLength",
-      label: "At least 8 characters",
+      label: t.reqMinLength,
       met: value.length >= 8,
     },
     {
       id: "uppercase",
-      label: "At least one uppercase letter (A-Z)",
+      label: t.reqUpper,
       met: /[A-Z]/.test(value),
     },
     {
       id: "lowercase",
-      label: "At least one lowercase letter (a-z)",
+      label: t.reqLower,
       met: /[a-z]/.test(value),
     },
     {
       id: "number",
-      label: "At least one number (0-9)",
+      label: t.reqNumber,
       met: /[0-9]/.test(value),
     },
     {
       id: "special",
-      label: "At least one special character",
+      label: t.reqSpecial,
       met: /[^A-Za-z0-9]/.test(value),
     },
     {
       id: "maxBytes",
       // Kept for strength/"Strong password" and submit validation — hidden from the
       // checklist so users are not shown technical UTF-8 byte details.
-      label: "Within 72 UTF-8 byte maximum",
+      label: t.reqMaxBytes,
       met: utf8ByteLength(value) <= MAX_PASSWORD_BYTES,
       visible: false,
     },
@@ -70,17 +73,17 @@ function getPasswordRequirements(password) {
 
 // Live username rules mirror backend (3–50 chars; letters/numbers/underscore only).
 // Availability (USERNAME_TAKEN) can only be confirmed by the backend/database.
-function getUsernameRequirements(username) {
+function getUsernameRequirements(username, t) {
   const value = typeof username === "string" ? username : "";
   return [
     {
       id: "length",
-      label: "3 to 50 characters",
+      label: t.reqUsernameLength,
       met: value.length >= 3 && value.length <= 50,
     },
     {
       id: "chars",
-      label: "Only letters, numbers, and underscore",
+      label: t.reqUsernameChars,
       met: value.length > 0 && USERNAME_REGEX.test(value),
     },
   ];
@@ -88,12 +91,12 @@ function getUsernameRequirements(username) {
 
 // Live email format check uses the same regex as submit/backend — no extra restrictions.
 // Whether the email is already taken (EMAIL_TAKEN) is confirmed only by the backend.
-function getEmailRequirements(email) {
+function getEmailRequirements(email, t) {
   const value = typeof email === "string" ? email.trim() : "";
   return [
     {
       id: "format",
-      label: "Valid email format",
+      label: t.reqEmailFormat,
       met: value.length > 0 && EMAIL_REGEX.test(value),
     },
   ];
@@ -101,23 +104,23 @@ function getEmailRequirements(email) {
 
 // Strength is derived only from how many of the existing requirements are met
 // (including the hidden 72-byte rule). "Strong password" only when every rule passes.
-function getPasswordStrength(requirements) {
+function getPasswordStrength(requirements, t) {
   const metCount = requirements.filter((item) => item.met).length;
   const total = requirements.length;
 
   if (metCount === total) {
-    return { level: "strong", label: "Strong password", progress: 100 };
+    return { level: "strong", label: t.strengthStrong, progress: 100 };
   }
   if (metCount >= 3) {
     return {
       level: "medium",
-      label: "Medium",
+      label: t.strengthMedium,
       progress: Math.round((metCount / total) * 100),
     };
   }
   return {
     level: "weak",
-    label: "Weak",
+    label: t.strengthWeak,
     progress: Math.round((metCount / total) * 100),
   };
 }
@@ -186,10 +189,10 @@ function RequirementRows({ items, testIdPrefix }) {
 }
 
 // Checklist updates while typing so users see progress without red errors on every keystroke.
-function PasswordRequirementsChecklist({ password }) {
-  const requirements = getPasswordRequirements(password);
+function PasswordRequirementsChecklist({ password, t }) {
+  const requirements = getPasswordRequirements(password, t);
   const visibleRequirements = requirements.filter((item) => item.visible !== false);
-  const strength = getPasswordStrength(requirements);
+  const strength = getPasswordStrength(requirements, t);
   const strengthColor = STRENGTH_COLORS[strength.level];
 
   return (
@@ -230,7 +233,7 @@ function PasswordRequirementsChecklist({ password }) {
       <LinearProgress
         variant="determinate"
         value={Math.max(strength.progress, password ? 8 : 0)}
-        aria-label={`Password strength: ${strength.label}`}
+        aria-label={t.passwordStrengthAria(strength.label)}
         sx={{
           height: 6,
           borderRadius: 3,
@@ -248,8 +251,8 @@ function PasswordRequirementsChecklist({ password }) {
   );
 }
 
-function UsernameRequirementsChecklist({ username }) {
-  const requirements = getUsernameRequirements(username);
+function UsernameRequirementsChecklist({ username, t }) {
+  const requirements = getUsernameRequirements(username, t);
 
   return (
     <Box data-testid="username-requirements" sx={liveFeedbackPanelSx}>
@@ -258,8 +261,8 @@ function UsernameRequirementsChecklist({ username }) {
   );
 }
 
-function EmailRequirementsChecklist({ email }) {
-  const requirements = getEmailRequirements(email);
+function EmailRequirementsChecklist({ email, t }) {
+  const requirements = getEmailRequirements(email, t);
 
   return (
     <Box data-testid="email-requirements" sx={liveFeedbackPanelSx}>
@@ -277,45 +280,45 @@ function emptyFieldErrors() {
   };
 }
 
-function validateSignUp({ email, username, password, confirmPassword }) {
+function validateSignUp({ email, username, password, confirmPassword }, t) {
   const errors = emptyFieldErrors();
 
   if (!email) {
-    errors.email = "Email is required.";
+    errors.email = t.emailRequired;
   } else if (!EMAIL_REGEX.test(email)) {
-    errors.email = "Enter a valid email address.";
+    errors.email = t.emailInvalid;
   }
 
   if (!username) {
-    errors.username = "Username is required.";
+    errors.username = t.usernameRequired;
   } else if (username.length < 3 || username.length > 50) {
-    errors.username = "Username must be between 3 and 50 characters.";
+    errors.username = t.usernameLength;
   } else if (!USERNAME_REGEX.test(username)) {
-    errors.username = "Username may only contain letters, numbers, and underscores.";
+    errors.username = t.usernameChars;
   }
 
   // Same password rules as the backend, checked here only so the user gets
   // immediate feedback before we send the registration request.
   if (!password) {
-    errors.password = "Password is required.";
+    errors.password = t.passwordRequired;
   } else if (password.length < 8) {
-    errors.password = "Password must be at least 8 characters.";
+    errors.password = t.passwordMinLength;
   } else if (utf8ByteLength(password) > MAX_PASSWORD_BYTES) {
-    errors.password = "Password is too long.";
+    errors.password = t.passwordTooLong;
   } else if (!/[A-Z]/.test(password)) {
-    errors.password = "Password must include at least one uppercase letter.";
+    errors.password = t.passwordUpper;
   } else if (!/[a-z]/.test(password)) {
-    errors.password = "Password must include at least one lowercase letter.";
+    errors.password = t.passwordLower;
   } else if (!/[0-9]/.test(password)) {
-    errors.password = "Password must include at least one number.";
+    errors.password = t.passwordNumber;
   } else if (!/[^A-Za-z0-9]/.test(password)) {
-    errors.password = "Password must include at least one special character.";
+    errors.password = t.passwordSpecial;
   }
 
   if (!confirmPassword) {
-    errors.confirmPassword = "Please confirm your password.";
+    errors.confirmPassword = t.confirmRequired;
   } else if (confirmPassword !== password) {
-    errors.confirmPassword = "Passwords do not match.";
+    errors.confirmPassword = t.passwordsMismatch;
   }
 
   return errors;
@@ -328,6 +331,8 @@ function hasFieldErrors(errors) {
 function SignUpPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { language, setLanguage, dir } = useMatchingLanguage();
+  const t = translations[language] || translations.en;
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -353,12 +358,15 @@ function SignUpPage() {
 
     const trimmedEmail = email.trim();
     const trimmedUsername = username.trim();
-    const nextErrors = validateSignUp({
-      email: trimmedEmail,
-      username: trimmedUsername,
-      password,
-      confirmPassword,
-    });
+    const nextErrors = validateSignUp(
+      {
+        email: trimmedEmail,
+        username: trimmedUsername,
+        password,
+        confirmPassword,
+      },
+      t
+    );
 
     setFieldErrors(nextErrors);
     if (hasFieldErrors(nextErrors)) {
@@ -391,24 +399,20 @@ function SignUpPage() {
         if (hasFieldErrors(mapped)) {
           setFieldErrors(mapped);
         } else {
-          setGeneralError(
-            apiError?.message || "Please fix the highlighted fields."
-          );
+          setGeneralError(apiError?.message || t.fixHighlightedFields);
         }
       } else if (code === "EMAIL_TAKEN") {
         setFieldErrors({
           ...emptyFieldErrors(),
-          email: apiError?.message || "An account with this email already exists.",
+          email: apiError?.message || t.emailTaken,
         });
       } else if (code === "USERNAME_TAKEN") {
         setFieldErrors({
           ...emptyFieldErrors(),
-          username: apiError?.message || "This username is already taken.",
+          username: apiError?.message || t.usernameTaken,
         });
       } else {
-        setGeneralError(
-          "Unable to create your account right now. Please try again."
-        );
+        setGeneralError(t.signUpUnavailable);
       }
     } finally {
       setSubmitting(false);
@@ -422,10 +426,27 @@ function SignUpPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
+        position: "relative",
         background:
           "linear-gradient(160deg, #EAF7FD 0%, #F9FBFF 45%, #FDF2F6 100%)",
       }}
     >
+      <Box
+        sx={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          zIndex: 2,
+          direction: "ltr",
+        }}
+      >
+        <LanguageSelector
+          language={language}
+          onLanguageChange={setLanguage}
+          ariaLabel={t.languageAria}
+        />
+      </Box>
+
       <Box
         sx={{
           flex: 1,
@@ -441,6 +462,8 @@ function SignUpPage() {
         component="form"
         onSubmit={handleSubmit}
         noValidate
+        dir={dir}
+        lang={language}
         sx={{
           width: "100%",
           maxWidth: 420,
@@ -452,6 +475,7 @@ function SignUpPage() {
           backgroundColor: "rgba(255, 255, 255, 0.85)",
           boxShadow: "0 12px 40px rgba(7, 20, 45, 0.08)",
           border: "1px solid rgba(247, 95, 138, 0.12)",
+          direction: dir,
         }}
       >
         <Typography
@@ -463,13 +487,13 @@ function SignUpPage() {
             textAlign: "center",
           }}
         >
-          Sign Up
+          {t.signUpTitle}
         </Typography>
 
         <Typography
           sx={{ color: "#6B7280", textAlign: "center", mt: -0.5, mb: 0.5 }}
         >
-          Create your Queens Match account
+          {t.signUpSubtitle}
         </Typography>
 
         {generalError ? (
@@ -481,7 +505,7 @@ function SignUpPage() {
         <TextField
           id="signup-email"
           name="email"
-          label="Email"
+          label={t.email}
           type="email"
           autoComplete="email"
           value={email}
@@ -500,12 +524,14 @@ function SignUpPage() {
           required
         />
 
-        {showEmailChecklist ? <EmailRequirementsChecklist email={email} /> : null}
+        {showEmailChecklist ? (
+          <EmailRequirementsChecklist email={email} t={t} />
+        ) : null}
 
         <TextField
           id="signup-username"
           name="username"
-          label="Username"
+          label={t.username}
           type="text"
           autoComplete="username"
           value={username}
@@ -525,13 +551,13 @@ function SignUpPage() {
         />
 
         {showUsernameChecklist ? (
-          <UsernameRequirementsChecklist username={username} />
+          <UsernameRequirementsChecklist username={username} t={t} />
         ) : null}
 
         <TextField
           id="signup-password"
           name="password"
-          label="Password"
+          label={t.password}
           type="password"
           autoComplete="new-password"
           value={password}
@@ -552,13 +578,13 @@ function SignUpPage() {
         />
 
         {showPasswordChecklist ? (
-          <PasswordRequirementsChecklist password={password} />
+          <PasswordRequirementsChecklist password={password} t={t} />
         ) : null}
 
         <TextField
           id="signup-confirm-password"
           name="confirmPassword"
-          label="Confirm Password"
+          label={t.confirmPassword}
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
@@ -589,22 +615,22 @@ function SignUpPage() {
           {submitting ? (
             <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
               <CircularProgress size={18} color="inherit" />
-              Creating account...
+              {t.creatingAccount}
             </Box>
           ) : (
-            "Sign Up"
+            t.signUp
           )}
         </Button>
 
         <Typography sx={{ textAlign: "center", color: "#6B7280", mt: 0.5 }}>
-          Already have an account?{" "}
+          {t.hasAccount}{" "}
           <Link
             component={RouterLink}
             to="/login"
             underline="hover"
             sx={{ color: "#F75F8A", fontWeight: 600 }}
           >
-            Log In
+            {t.logInLink}
           </Link>
         </Typography>
 
@@ -615,7 +641,7 @@ function SignUpPage() {
           disabled={submitting}
           sx={{ color: "#4A5568" }}
         >
-          Back to home
+          {t.backHome}
         </Button>
       </Box>
       </Box>

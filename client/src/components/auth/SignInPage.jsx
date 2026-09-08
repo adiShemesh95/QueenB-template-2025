@@ -10,7 +10,10 @@ import {
 } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useMatchingLanguage } from "../../matching/MatchingLanguageContext";
 import BootcampFooter from "../BootcampFooter";
+import LanguageSelector from "../home/LanguageSelector";
+import translations from "./translations";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -21,17 +24,17 @@ function emptyFieldErrors() {
   };
 }
 
-function validateSignIn({ email, password }) {
+function validateSignIn({ email, password }, t) {
   const errors = emptyFieldErrors();
 
   if (!email) {
-    errors.email = "Email is required.";
+    errors.email = t.emailRequired;
   } else if (!EMAIL_REGEX.test(email)) {
-    errors.email = "Enter a valid email address.";
+    errors.email = t.emailInvalid;
   }
 
   if (!password) {
-    errors.password = "Password is required.";
+    errors.password = t.passwordRequired;
   }
 
   return errors;
@@ -54,6 +57,8 @@ function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const adminIntent = location.state?.adminIntent === true;
+  const { language, setLanguage, dir } = useMatchingLanguage();
+  const t = translations[language] || translations.en;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,10 +73,13 @@ function SignInPage() {
     setGeneralError("");
 
     const trimmedEmail = email.trim();
-    const nextErrors = validateSignIn({
-      email: trimmedEmail,
-      password,
-    });
+    const nextErrors = validateSignIn(
+      {
+        email: trimmedEmail,
+        password,
+      },
+      t
+    );
 
     setFieldErrors(nextErrors);
     if (hasFieldErrors(nextErrors)) {
@@ -115,16 +123,12 @@ function SignInPage() {
         if (hasFieldErrors(mapped)) {
           setFieldErrors(mapped);
         } else {
-          setGeneralError(
-            apiError?.message || "Please fix the highlighted fields."
-          );
+          setGeneralError(apiError?.message || t.fixHighlightedFields);
         }
       } else if (code === "INVALID_CREDENTIALS") {
-        setGeneralError("Invalid email or password.");
+        setGeneralError(apiError?.message || t.invalidCredentials);
       } else {
-        setGeneralError(
-          "Unable to sign in right now. Please try again."
-        );
+        setGeneralError(t.signInUnavailable);
       }
     } finally {
       setSubmitting(false);
@@ -138,10 +142,27 @@ function SignInPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
+        position: "relative",
         background:
           "linear-gradient(160deg, #EAF7FD 0%, #F9FBFF 45%, #FDF2F6 100%)",
       }}
     >
+      <Box
+        sx={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          zIndex: 2,
+          direction: "ltr",
+        }}
+      >
+        <LanguageSelector
+          language={language}
+          onLanguageChange={setLanguage}
+          ariaLabel={t.languageAria}
+        />
+      </Box>
+
       <Box
         sx={{
           flex: 1,
@@ -157,6 +178,8 @@ function SignInPage() {
         component="form"
         onSubmit={handleSubmit}
         noValidate
+        dir={dir}
+        lang={language}
         sx={{
           width: "100%",
           maxWidth: 420,
@@ -168,6 +191,7 @@ function SignInPage() {
           backgroundColor: "rgba(255, 255, 255, 0.85)",
           boxShadow: "0 12px 40px rgba(7, 20, 45, 0.08)",
           border: "1px solid rgba(247, 95, 138, 0.12)",
+          direction: dir,
         }}
       >
         <Typography
@@ -179,15 +203,13 @@ function SignInPage() {
             textAlign: "center",
           }}
         >
-          Sign In
+          {t.signInTitle}
         </Typography>
 
         <Typography
           sx={{ color: "#6B7280", textAlign: "center", mt: -0.5, mb: 0.5 }}
         >
-          {adminIntent
-            ? "Sign in to continue to Admin"
-            : "Welcome back to Queens Match"}
+          {adminIntent ? t.signInAdminSubtitle : t.signInSubtitle}
         </Typography>
 
         {generalError ? (
@@ -199,7 +221,7 @@ function SignInPage() {
         <TextField
           id="signin-email"
           name="email"
-          label="Email"
+          label={t.email}
           type="email"
           autoComplete="email"
           value={email}
@@ -214,7 +236,7 @@ function SignInPage() {
         <TextField
           id="signin-password"
           name="password"
-          label="Password"
+          label={t.password}
           type="password"
           autoComplete="current-password"
           value={password}
@@ -245,24 +267,24 @@ function SignInPage() {
           {submitting ? (
             <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
               <CircularProgress size={18} color="inherit" />
-              Signing in...
+              {t.signingIn}
             </Box>
           ) : (
-            "Sign In"
+            t.signIn
           )}
         </Button>
 
         {/* Public Sign Up is for normal users only — Admin is isAdmin capability, not self-registration. */}
         {!adminIntent ? (
           <Typography sx={{ textAlign: "center", color: "#6B7280", mt: 0.5 }}>
-            Don&apos;t have an account?{" "}
+            {t.noAccount}{" "}
             <Link
               component={RouterLink}
               to="/register"
               underline="hover"
               sx={{ color: "#F75F8A", fontWeight: 600 }}
             >
-              Sign Up
+              {t.signUpLink}
             </Link>
           </Typography>
         ) : null}
@@ -274,7 +296,7 @@ function SignInPage() {
           disabled={submitting}
           sx={{ color: "#4A5568" }}
         >
-          Back to home
+          {t.backHome}
         </Button>
       </Box>
       </Box>
