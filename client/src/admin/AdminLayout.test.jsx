@@ -106,7 +106,7 @@ describe("AdminLayout", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("Admin navigation order is Calendar, Users, Matchings", () => {
+  test("Admin navigation order is Calendar, Users, Matchings, Analytics", () => {
     renderAdminLayout();
 
     const nav = screen.getByRole("navigation", { name: /^admin$/i });
@@ -118,6 +118,7 @@ describe("AdminLayout", () => {
       "/admin/calendar",
       "/admin/users",
       "/admin/matchings",
+      "/admin/analytics",
     ]);
   });
 });

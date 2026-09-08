@@ -54,3 +54,9 @@ export async function getAdminMatchingById(id) {
     throw err;
   }
 }
+
+/** GET /api/admin/analytics → { analytics } dashboard payload */
+export async function getAdminAnalytics() {
+  const response = await adminClient.get("/api/admin/analytics");
+  return response.data.analytics ?? null;
+}

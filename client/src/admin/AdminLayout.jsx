@@ -76,6 +76,7 @@ function AdminLayout() {
     { to: "/admin/calendar", label: t.navCalendar },
     { to: "/admin/users", label: t.navUsers },
     { to: "/admin/matchings", label: t.navMatchings },
+    { to: "/admin/analytics", label: t.navAnalytics },
   ];
 
   const handleLogout = async () => {

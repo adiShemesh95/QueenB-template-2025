@@ -38,6 +38,7 @@ import AdminUserDetailsPage from "./admin/AdminUserDetailsPage";
 import AdminMatchingsPage from "./admin/AdminMatchingsPage";
 import AdminMatchingDetailsPage from "./admin/AdminMatchingDetailsPage";
 import AdminCalendarPage from "./admin/AdminCalendarPage";
+import AdminAnalyticsPage from "./admin/AdminAnalyticsPage";
 
 function App() {
   return (
@@ -150,6 +151,7 @@ function App() {
                   element={<AdminMatchingDetailsPage />}
                 />
                 <Route path="calendar" element={<AdminCalendarPage />} />
+                <Route path="analytics" element={<AdminAnalyticsPage />} />
               </Route>
             </Routes>
           </Router>
