@@ -11,6 +11,7 @@ import {
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../components/Logo";
+import BootcampFooter from "../components/BootcampFooter";
 
 const pageBackground = `
   radial-gradient(ellipse 80% 55% at 0% 0%, rgba(141, 216, 247, 0.35) 0%, transparent 55%),
@@ -276,6 +277,7 @@ function AdminLayout() {
           <Outlet />
         </Container>
       </Box>
+      <BootcampFooter />
     </Box>
   );
 }

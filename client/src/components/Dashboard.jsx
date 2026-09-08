@@ -5,6 +5,7 @@ import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import VolunteerActivismRoundedIcon from "@mui/icons-material/VolunteerActivismRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import AppNavbar from "./AppNavbar";
+import BootcampFooter from "./BootcampFooter";
 import { useAuth } from "../context/AuthContext";
 
 const pageBackground = `
@@ -178,6 +179,8 @@ function Dashboard() {
           </Box>
         </Container>
       </Box>
+
+      <BootcampFooter />
     </Box>
   );
 }

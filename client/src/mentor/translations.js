@@ -111,6 +111,11 @@ const translations = {
     cancelMeeting: "Cancel meeting",
     cancelMeetingSuccess: "The matched meeting was cancelled.",
     cancelMeetingError: "Unable to cancel this meeting.",
+    cancelMeetingConfirmTitle: "Cancel this meeting?",
+    cancelMeetingConfirmBody:
+      "This permanently cancels the matched meeting. The mentee can request mentoring with you again later.",
+    cancelMeetingConfirmAction: "Confirm",
+    cancelMeetingConfirmDismiss: "Cancel",
     cancelledMeetingLabel: (range) => `Cancelled meeting: ${range}`,
     meetingCancelled: "This matched meeting was cancelled.",
   },
@@ -214,6 +219,11 @@ const translations = {
     cancelMeeting: "ביטול הפגישה",
     cancelMeetingSuccess: "הפגישה שנקבעה בוטלה.",
     cancelMeetingError: "לא ניתן לבטל את הפגישה.",
+    cancelMeetingConfirmTitle: "לבטל את הפגישה?",
+    cancelMeetingConfirmBody:
+      "פעולה זו מבטלת לצמיתות את הפגישה שנקבעה. המנטית תוכל לשלוח בקשה חדשה מאוחר יותר.",
+    cancelMeetingConfirmAction: "אישור",
+    cancelMeetingConfirmDismiss: "ביטול",
     cancelledMeetingLabel: (range) => `פגישה שבוטלה: ${range}`,
     meetingCancelled: "הפגישה שנקבעה בוטלה.",
   },

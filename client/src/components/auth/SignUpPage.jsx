@@ -13,6 +13,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import BootcampFooter from "../BootcampFooter";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -421,14 +422,21 @@ function SignUpPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        px: 3,
-        py: 4,
         background:
           "linear-gradient(160deg, #EAF7FD 0%, #F9FBFF 45%, #FDF2F6 100%)",
       }}
     >
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 3,
+          py: 4,
+        }}
+      >
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -610,6 +618,8 @@ function SignUpPage() {
           Back to home
         </Button>
       </Box>
+      </Box>
+      <BootcampFooter />
     </Box>
   );
 }

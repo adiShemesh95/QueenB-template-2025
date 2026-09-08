@@ -4,8 +4,7 @@ import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
 import FeaturesSection from "./FeaturesSection";
 import QuoteSection from "./QuoteSection";
-import WaveDivider from "./WaveDivider";
-import BootcampFooter from "./BootcampFooter";
+import BootcampFooter from "../BootcampFooter";
 import translations from "./translations";
 
 function Home() {
@@ -95,17 +94,7 @@ function Home() {
           <QuoteSection t={t} textDir={textDir} />
         </Box>
 
-        {/* One continuous wave + branding composition (blush behind both) */}
-        <Box
-          sx={{
-            backgroundColor: "#FBF7F8",
-            direction: "ltr",
-            mt: { xs: 1, sm: 2 },
-          }}
-        >
-          <WaveDivider />
-          <BootcampFooter t={t} />
-        </Box>
+        <BootcampFooter />
       </Box>
     </Box>
   );

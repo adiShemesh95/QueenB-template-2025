@@ -80,6 +80,11 @@ const translations = {
     cancelMeeting: "Cancel meeting",
     cancelMeetingSuccess: "The matched meeting was cancelled.",
     cancelMeetingError: "Could not cancel this meeting.",
+    cancelMeetingConfirmTitle: "Cancel this meeting?",
+    cancelMeetingConfirmBody:
+      "This permanently cancels the matched meeting. You can request mentoring with this mentor again later.",
+    cancelMeetingConfirmAction: "Confirm",
+    cancelMeetingConfirmDismiss: "Cancel",
     requestReschedule: "Request reschedule",
     rescheduleSuccess:
       "Reschedule requested. Your mentor will propose new times.",
@@ -159,6 +164,11 @@ const translations = {
     cancelMeeting: "ביטול הפגישה",
     cancelMeetingSuccess: "הפגישה שנקבעה בוטלה.",
     cancelMeetingError: "לא ניתן לבטל את הפגישה.",
+    cancelMeetingConfirmTitle: "לבטל את הפגישה?",
+    cancelMeetingConfirmBody:
+      "פעולה זו מבטלת לצמיתות את הפגישה שנקבעה. אפשר לשלוח בקשת מנטורינג חדשה לאותה מנטורית מאוחר יותר.",
+    cancelMeetingConfirmAction: "אישור",
+    cancelMeetingConfirmDismiss: "ביטול",
     requestReschedule: "בקשת שינוי מועד",
     rescheduleSuccess: "בקשת שינוי המועד נשלחה. המנטורית תציע מועדים חדשים.",
     rescheduleError: "לא ניתן לבקש שינוי מועד.",
