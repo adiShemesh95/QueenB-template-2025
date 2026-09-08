@@ -4,13 +4,15 @@
  * StatusChip, which depend on MatchingLanguageContext — avoids refactoring
  * teammate-owned matching UI just to share labels.
  *
- * Only the four CURRENT production statuses. Future lifecycle values
- * (attendance, meeting outcome, feedback completed) are intentionally omitted.
+ * Current production statuses only (including CANCELLED after a matched
+ * meeting is cancelled). Future lifecycle values (attendance, meeting
+ * outcome, feedback completed) are intentionally omitted.
  */
 export const ADMIN_MATCHING_STATUSES = [
   "PENDING_MENTOR",
   "PENDING_MENTEE",
   "MATCHED",
+  "CANCELLED",
   "REJECTED",
 ];
 
@@ -18,22 +20,22 @@ export const ADMIN_STATUS_LABELS = {
   PENDING_MENTOR: "Waiting for mentor times",
   PENDING_MENTEE: "Waiting for mentee selection",
   MATCHED: "Matched",
+  // Post-MATCHED cancel (keeps selected_slot_id). Not the same as REJECTED.
+  CANCELLED: "Cancelled",
   REJECTED: "Rejected",
 };
 
 /**
  * Statuses that can appear as Calendar events under the CURRENT lifecycle.
  *
- * Production only sets selected_slot_id when mentee selects a slot, and that
- * transition always sets status to MATCHED. Reschedule clears selected_slot_id
- * before returning to PENDING_MENTOR. PENDING_* / REJECTED therefore never
- * represent scheduled Calendar meetings today.
- *
- * When later official post-MATCHED statuses exist in production and keep a
- * selected meeting time, append them here (and to ADMIN_STATUS_COLORS) — do
- * not invent them early.
+ * Calendar = scheduled meetings (matching.selected_slot_id), not every report row.
+ * - MATCHED: active scheduled meeting after mentee selects a slot.
+ * - CANCELLED: matched meeting that was cancelled afterward; production keeps
+ *   selected_slot_id on purpose so the cancelled meeting remains on the Calendar.
+ * PENDING_* / REJECTED never get selected_slot_id in production, so they stay
+ * off the Calendar legend (report-only).
  */
-export const ADMIN_CALENDAR_LEGEND_STATUSES = ["MATCHED"];
+export const ADMIN_CALENDAR_LEGEND_STATUSES = ["MATCHED", "CANCELLED"];
 
 /**
  * Admin-local status visuals (chips + calendar events).
@@ -41,8 +43,8 @@ export const ADMIN_CALENDAR_LEGEND_STATUSES = ["MATCHED"];
  * matching constants just to share colors. Calendar reuses this map so
  * status styling stays centralized — not scattered as inline hex values.
  *
- * Only the four CURRENT production statuses; future official Calendar colors
- * (attendance / outcome / feedback) are added only when those statuses exist.
+ * CANCELLED uses a clear red so cancelled scheduled meetings read differently
+ * from green MATCHED (and from pinker REJECTED, which is pre-match only).
  */
 export const ADMIN_STATUS_COLORS = {
   PENDING_MENTOR: {
@@ -63,6 +65,12 @@ export const ADMIN_STATUS_COLORS = {
     border: "#38A169",
     dot: "#38A169",
   },
+  CANCELLED: {
+    bg: "rgba(229, 62, 62, 0.18)",
+    color: "#9B2C2C",
+    border: "#E53E3E",
+    dot: "#E53E3E",
+  },
   REJECTED: {
     bg: "rgba(247, 95, 138, 0.16)",
     color: "#C53030",
@@ -82,8 +90,10 @@ export function getAdminStatusColors(status) {
  * WHY selectedSlot only:
  * - selectedSlot is the chosen scheduled meeting time (matching.selected_slot_id).
  * - Proposed slots are intentionally NOT rendered as separate meetings.
+ * - CANCELLED rows still appear when selectedSlot remains (production cancel
+ *   keeps the slot history; do not hide them from Calendar).
  * - Matchings without selectedSlot stay visible on /admin/matchings but do
- *   not appear on the Calendar (Calendar = scheduled times only).
+ *   not appear on the Calendar.
  *
  * Does not invent attendance, completion, or feedback — presentation only.
  */

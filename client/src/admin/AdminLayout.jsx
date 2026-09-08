@@ -136,7 +136,7 @@ function AdminLayout() {
               minWidth: 0,
             }}
           >
-            <Logo />
+            <Logo disableLink />
             <Typography
               component="span"
               aria-label="Admin mode"

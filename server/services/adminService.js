@@ -3,18 +3,20 @@ const { toPublicUser } = require("./authService");
 const { getMentorProfileByUserId } = require("./mentorsService");
 
 /**
- * Current production matching statuses only.
- * matchingService keeps ACTIVE_STATUSES private (and omits REJECTED); there is
- * no exported full list — kept Admin-local to avoid teammate-owned refactoring.
+ * Current production matching statuses for Admin report filters.
+ * matchingService keeps ACTIVE_STATUSES private; this Admin-local allowlist
+ * avoids importing teammate-owned matching modules.
  *
- * Intentionally excludes future lifecycle values (attendance confirmed, meeting
- * happened / did not happen, feedback completed) until matching implements them.
- * Stage 3 must report real statuses, not invent unfinished meeting states.
+ * CANCELLED is included because cancelMatchedMeeting is a real production
+ * status (post-MATCHED). REJECTED remains the older pre-match terminal status.
+ * Future lifecycle values (attendance / outcome / feedback) stay omitted until
+ * matching implements them.
  */
 const MATCHING_REPORT_STATUSES = [
   "PENDING_MENTOR",
   "PENDING_MENTEE",
   "MATCHED",
+  "CANCELLED",
   "REJECTED",
 ];
 

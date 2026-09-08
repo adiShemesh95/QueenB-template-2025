@@ -556,6 +556,50 @@ describe("GET /api/admin/matchings — filters", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  test("status filter accepts CANCELLED and returns cancelled rows with selectedSlot", async () => {
+    const admin = await registerAdmin();
+    const mentor = await registerUser();
+    const mentee = await registerUser();
+
+    await createMentorProfile(mentor.cookie);
+    const matching = await createMatching(mentee.cookie, mentor.user.id);
+
+    const slot = await pool.query(
+      `INSERT INTO matching_slots (matching_id, start_time, end_time, is_selected)
+       VALUES ($1, $2, $3, true)
+       RETURNING id, start_time, end_time`,
+      [
+        matching.id,
+        "2026-09-20T11:30:00.000Z",
+        "2026-09-20T12:15:00.000Z",
+      ]
+    );
+
+    await pool.query(
+      `UPDATE matching
+       SET selected_slot_id = $1, status = 'CANCELLED', updated_at = NOW()
+       WHERE id = $2`,
+      [slot.rows[0].id, matching.id]
+    );
+
+    const res = await request(app)
+      .get("/api/admin/matchings")
+      .query({ status: "CANCELLED" })
+      .set("Cookie", admin.cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.matchings.every((m) => m.status === "CANCELLED")).toBe(
+      true
+    );
+    const reported = res.body.matchings.find((m) => m.id === matching.id);
+    expect(reported).toBeTruthy();
+    expect(reported.selectedSlot).toEqual(
+      expect.objectContaining({
+        id: slot.rows[0].id,
+      })
+    );
+  });
+
   test("participantId filter returns matchings where user is mentor or mentee", async () => {
     const admin = await registerAdmin();
     const mentor = await registerUser();

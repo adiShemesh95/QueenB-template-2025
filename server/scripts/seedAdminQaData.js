@@ -154,11 +154,25 @@ function calendarAnchors(now = new Date()) {
       (d) => d >= 1 && d <= daysInMonth && d !== todayDay && d !== beginDay && d !== endDay
     ) || Math.min(Math.max(4, daysInMonth - 3), daysInMonth);
 
+  // Separate current-month day for a cancelled scheduled meeting (Calendar QA).
+  const cancelledDayCandidates = [20, 18, 22, 25, 7, 14];
+  const cancelledDay =
+    cancelledDayCandidates.find(
+      (d) =>
+        d >= 1 &&
+        d <= daysInMonth &&
+        d !== todayDay &&
+        d !== beginDay &&
+        d !== endDay &&
+        d !== sameDay
+    ) || Math.min(Math.max(sameDay + 1, beginDay + 1), daysInMonth);
+
   return {
     currentMonthBegin: atUtc(year, month, beginDay, 11, 0),
     currentMonthSameDayMorning: atUtc(year, month, sameDay, 10, 0),
     currentMonthSameDayAfternoon: atUtc(year, month, sameDay, 14, 0),
     currentMonthToday: atUtc(year, month, todayDay, 13, 0),
+    currentMonthCancelled: atUtc(year, month, cancelledDay, 11, 30),
     currentMonthEnd: atUtc(year, month, endDay, 16, 0),
     nextMonth: atUtc(year, month + 1, 10, 13, 0),
     previousMonth: atUtc(year, month - 1, 12, 9, 0),
@@ -170,6 +184,7 @@ function calendarAnchors(now = new Date()) {
     beginDay,
     sameDay,
     todayDay,
+    cancelledDay,
     endDay,
   };
 }
@@ -314,6 +329,21 @@ async function selectSlot(client, matchingId, slotId) {
     `UPDATE matching SET selected_slot_id = $1, status = 'MATCHED', updated_at = NOW()
      WHERE id = $2`,
     [slotId, matchingId]
+  );
+}
+
+/**
+ * Mirror production cancelMatchedMeeting for QA only: status → CANCELLED while
+ * keeping selected_slot_id and slot rows (unlike REJECTED, which is pre-match).
+ */
+async function markCancelledKeepingSelectedSlot(client, matchingId) {
+  await client.query(
+    `UPDATE matching
+     SET status = 'CANCELLED', updated_at = NOW()
+     WHERE id = $1
+       AND status = 'MATCHED'
+       AND selected_slot_id IS NOT NULL`,
+    [matchingId]
   );
 }
 
@@ -497,6 +527,7 @@ async function seed() {
       sameMorning: null,
       sameAfternoon: null,
       today: null,
+      cancelled: null,
       end: null,
       next: null,
       prev: null,
@@ -688,7 +719,35 @@ async function seed() {
       await selectSlot(client, calendarMatchingIds.end, slotId);
     }
 
-    // 12) PENDING_MENTOR after conceptual reschedule — both as mentor / mentee3
+    // 12) CANCELLED scheduled meeting (current month) — Mentor B / mentee4
+    //     Mimics production: select slot first, then cancel while keeping
+    //     selected_slot_id so Admin Calendar still shows the meeting in red.
+    calendarMatchingIds.cancelled = await insertMatching(client, {
+      mentorId: ids.mentorB,
+      menteeId: ids.mentee4,
+      status: "PENDING_MENTEE",
+    });
+    {
+      const slotId = await insertSlot(
+        client,
+        calendarMatchingIds.cancelled,
+        anchors.currentMonthCancelled,
+        addMinutes(anchors.currentMonthCancelled, 45)
+      );
+      await insertSlot(
+        client,
+        calendarMatchingIds.cancelled,
+        addMinutes(anchors.currentMonthCancelled, 90),
+        addMinutes(anchors.currentMonthCancelled, 135)
+      );
+      await selectSlot(client, calendarMatchingIds.cancelled, slotId);
+      await markCancelledKeepingSelectedSlot(
+        client,
+        calendarMatchingIds.cancelled
+      );
+    }
+
+    // 13) PENDING_MENTOR after conceptual reschedule — both as mentor / mentee3
     const pendingMentorRescheduleBothId = await insertMatching(client, {
       mentorId: ids.both,
       menteeId: ids.mentee3,
@@ -697,7 +756,7 @@ async function seed() {
       moreTimesRequested: false,
     });
 
-    // 13) CLEAR rescheduleUsed = Yes demo (matches production requestReschedule result):
+    // 14) CLEAR rescheduleUsed = Yes demo (matches production requestReschedule result):
     //     was MATCHED → reschedule once → PENDING_MENTOR, slots cleared, selected_slot_id NULL.
     const rescheduleUsedMatchingId = await insertMatching(client, {
       mentorId: ids.rescheduleMentor,
@@ -707,7 +766,7 @@ async function seed() {
       moreTimesRequested: false,
     });
 
-    // 14) Comparison: fresh request still awaiting mentor times — reschedule never used.
+    // 15) Comparison: fresh request still awaiting mentor times — reschedule never used.
     const rescheduleFreshMatchingId = await insertMatching(client, {
       mentorId: ids.rescheduleMentor,
       menteeId: ids.rescheduleFresh,
@@ -734,7 +793,7 @@ async function seed() {
       [[rescheduleUsedMatchingId, rescheduleFreshMatchingId]]
     );
 
-    // Calendar event inventory (MATCHED + selected_slot_id only).
+    // Calendar events: any status with selected_slot_id (MATCHED + CANCELLED).
     const calendarRows = await client.query(
       `SELECT m.id, m.status, m.reschedule_used, m.selected_slot_id,
               mentor_u.username AS mentor, mentee_u.username AS mentee,
@@ -751,6 +810,7 @@ async function seed() {
           calendarMatchingIds.sameMorning,
           calendarMatchingIds.sameAfternoon,
           calendarMatchingIds.today,
+          calendarMatchingIds.cancelled,
           calendarMatchingIds.end,
           calendarMatchingIds.next,
           calendarMatchingIds.prev,
@@ -765,16 +825,16 @@ async function seed() {
     console.log(`QA mentor profiles: ${summary.profileCount}`);
     console.log("QA matchings by status:", summary.byStatus);
     console.log(`QA slots: ${summary.slotCount}`);
-    console.log(`QA selected slots (MATCHED with selected_slot_id): ${summary.selectedCount}`);
+    console.log(`QA selected slots (with selected_slot_id): ${summary.selectedCount}`);
     console.log(
       `Selected-slot consistency issues: ${summary.inconsistentSelected}`
     );
     console.log(`qa_admin is_admin: ${summary.adminOk}`);
     console.log("");
     console.log("========================================");
-    console.log("CALENDAR QA (MATCHED + selected_slot_id)");
+    console.log("CALENDAR QA (selected_slot_id: MATCHED + CANCELLED)");
     console.log(
-      `  Anchors (local month): begin=day ${anchors.beginDay}, same-day=${anchors.sameDay}, today=day ${anchors.todayDay}, end=day ${anchors.endDay}`
+      `  Anchors (local month): begin=day ${anchors.beginDay}, same-day=${anchors.sameDay}, today=day ${anchors.todayDay}, cancelled=day ${anchors.cancelledDay}, end=day ${anchors.endDay}`
     );
     for (const row of calendarRows.rows) {
       console.log(
@@ -785,6 +845,9 @@ async function seed() {
       `  Same-date pair IDs: ${calendarMatchingIds.sameMorning} + ${calendarMatchingIds.sameAfternoon}`
     );
     console.log(`  Today ID: ${calendarMatchingIds.today}`);
+    console.log(
+      `  CANCELLED Calendar ID: ${calendarMatchingIds.cancelled}`
+    );
     console.log(`  Previous month ID: ${calendarMatchingIds.prev}`);
     console.log(`  Next month ID: ${calendarMatchingIds.next}`);
     console.log(
@@ -850,20 +913,28 @@ async function seed() {
     );
 
     const calendarOk =
-      calendarRows.rows.length === 7 &&
+      calendarRows.rows.length === 8 &&
       calendarRows.rows.every(
         (r) =>
-          r.status === "MATCHED" &&
+          (r.status === "MATCHED" || r.status === "CANCELLED") &&
           r.selected_slot_id != null &&
           r.is_selected === true
       );
+    const cancelledOk = calendarRows.rows.some(
+      (r) =>
+        r.id === calendarMatchingIds.cancelled &&
+        r.status === "CANCELLED" &&
+        r.selected_slot_id != null &&
+        r.is_selected === true
+    );
 
     if (
       !summary.adminOk ||
       summary.inconsistentSelected > 0 ||
       !usedOk ||
       !freshOk ||
-      !calendarOk
+      !calendarOk ||
+      !cancelledOk
     ) {
       process.exitCode = 1;
       console.error("Verification failed.");

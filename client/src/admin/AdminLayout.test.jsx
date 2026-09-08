@@ -16,8 +16,15 @@ jest.mock("../context/AuthContext", () => ({
 
 jest.mock("../components/Logo", () => {
   const React = require("react");
-  return function MockLogo() {
-    return React.createElement("div", null, "Queens Match");
+  return function MockLogo({ disableLink }) {
+    return React.createElement(
+      "div",
+      {
+        "data-testid": "admin-logo",
+        "data-disable-link": disableLink ? "true" : "false",
+      },
+      "Queens Match"
+    );
   };
 });
 
@@ -56,5 +63,17 @@ describe("AdminLayout logout", () => {
     });
     expect(mockNavigate).not.toHaveBeenCalledWith("/");
     expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  test("Admin logo is rendered as display-only (no dashboard link)", () => {
+    render(<AdminLayout />);
+
+    expect(screen.getByTestId("admin-logo")).toHaveAttribute(
+      "data-disable-link",
+      "true"
+    );
+    expect(
+      screen.queryByRole("link", { name: /queens match/i })
+    ).not.toBeInTheDocument();
   });
 });

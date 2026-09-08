@@ -6,6 +6,9 @@ import {
 import {
   ADMIN_CALENDAR_LEGEND_STATUSES,
   ADMIN_MATCHING_STATUSES,
+  ADMIN_STATUS_COLORS,
+  ADMIN_STATUS_FILTER_OPTIONS,
+  getAdminStatusColors,
   getAdminStatusLabel,
   toAdminCalendarEvents,
 } from "./adminConstants";
@@ -20,11 +23,12 @@ describe("adminFormat", () => {
 });
 
 describe("adminConstants", () => {
-  test("exposes only the four current production statuses with readable labels", () => {
+  test("exposes current production statuses with readable labels", () => {
     expect(ADMIN_MATCHING_STATUSES).toEqual([
       "PENDING_MENTOR",
       "PENDING_MENTEE",
       "MATCHED",
+      "CANCELLED",
       "REJECTED",
     ]);
     expect(getAdminStatusLabel("PENDING_MENTOR")).toBe(
@@ -34,11 +38,31 @@ describe("adminConstants", () => {
       "Waiting for mentee selection"
     );
     expect(getAdminStatusLabel("MATCHED")).toBe("Matched");
+    expect(getAdminStatusLabel("CANCELLED")).toBe("Cancelled");
     expect(getAdminStatusLabel("REJECTED")).toBe("Rejected");
   });
 
-  test("calendar legend lists only statuses that can be scheduled events", () => {
-    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED"]);
+  test("calendar legend lists MATCHED and CANCELLED scheduled statuses", () => {
+    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED", "CANCELLED"]);
+  });
+
+  test("CANCELLED uses a dedicated red Admin color mapping", () => {
+    expect(ADMIN_STATUS_COLORS.CANCELLED).toEqual({
+      bg: "rgba(229, 62, 62, 0.18)",
+      color: "#9B2C2C",
+      border: "#E53E3E",
+      dot: "#E53E3E",
+    });
+    expect(getAdminStatusColors("CANCELLED")).toEqual(
+      ADMIN_STATUS_COLORS.CANCELLED
+    );
+    expect(getAdminStatusColors("MATCHED")).toEqual(ADMIN_STATUS_COLORS.MATCHED);
+  });
+
+  test("Admin report filter options include CANCELLED", () => {
+    expect(
+      ADMIN_STATUS_FILTER_OPTIONS.some((option) => option.value === "CANCELLED")
+    ).toBe(true);
   });
 
   test("toAdminCalendarEvents skips matchings without selectedSlot", () => {
@@ -61,6 +85,17 @@ describe("adminConstants", () => {
           end: "2026-03-01T15:00:00.000Z",
         },
       },
+      {
+        id: 3,
+        status: "CANCELLED",
+        mentor: { username: "e" },
+        mentee: { username: "f" },
+        selectedSlot: {
+          id: 10,
+          start: "2026-03-02T14:00:00.000Z",
+          end: "2026-03-02T15:00:00.000Z",
+        },
+      },
     ]);
     expect(events).toEqual([
       {
@@ -71,6 +106,15 @@ describe("adminConstants", () => {
         end: "2026-03-01T15:00:00.000Z",
         mentor: { username: "c" },
         mentee: { username: "d" },
+      },
+      {
+        id: 3,
+        status: "CANCELLED",
+        title: "e ↔ f",
+        start: "2026-03-02T14:00:00.000Z",
+        end: "2026-03-02T15:00:00.000Z",
+        mentor: { username: "e" },
+        mentee: { username: "f" },
       },
     ]);
   });

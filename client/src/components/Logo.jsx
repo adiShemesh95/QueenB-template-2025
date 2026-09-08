@@ -4,7 +4,8 @@ import { Link as RouterLink } from "react-router-dom";
 
 /**
  * Queens Match brand mark — crown icon + pink/sky gradient wordmark.
- * Always navigates to /dashboard.
+ * Links to /dashboard by default. Pass disableLink for display-only contexts
+ * (e.g. Admin navbar) where /dashboard navigation is wrong.
  */
 function CrownIcon({ size = 28 }) {
   const gradientId = useId().replace(/:/g, "");
@@ -43,7 +44,7 @@ function CrownIcon({ size = 28 }) {
   );
 }
 
-function Logo({ size = "md" }) {
+function Logo({ size = "md", disableLink = false }) {
   const iconSize = size === "sm" ? 24 : 28;
   const fontSize =
     size === "sm"
@@ -52,23 +53,31 @@ function Logo({ size = "md" }) {
 
   return (
     <Box
-      component={RouterLink}
-      to="/dashboard"
-      aria-label="Queens Match — go to dashboard"
+      component={disableLink ? "div" : RouterLink}
+      {...(disableLink
+        ? { "aria-label": "Queens Match" }
+        : {
+            to: "/dashboard",
+            "aria-label": "Queens Match — go to dashboard",
+          })}
       sx={{
         display: "inline-flex",
         alignItems: "center",
         gap: 1,
         textDecoration: "none",
         minWidth: 0,
-        "&:hover .qm-logo-text": {
-          filter: "brightness(1.05)",
-        },
-        "&:focus-visible": {
-          outline: "2px solid #F75F8A",
-          outlineOffset: 3,
-          borderRadius: 1,
-        },
+        ...(disableLink
+          ? {}
+          : {
+              "&:hover .qm-logo-text": {
+                filter: "brightness(1.05)",
+              },
+              "&:focus-visible": {
+                outline: "2px solid #F75F8A",
+                outlineOffset: 3,
+                borderRadius: 1,
+              },
+            }),
       }}
     >
       <CrownIcon size={iconSize} />

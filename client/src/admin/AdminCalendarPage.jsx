@@ -365,8 +365,9 @@ function DetailBlock({ label, children }) {
  * - The month grid stays visible even with zero events (empty calendar ≠ empty page).
  * - Desktop always shows a Meeting Details column (~30%); click fills the summary
  *   (does not navigate away). Full detail stays on /admin/matchings/:id.
- * - Legend lists only statuses that can actually appear as scheduled events
- *   under the current lifecycle (today: MATCHED). Extensible later.
+ * - Legend lists statuses that can appear as scheduled events today:
+ *   MATCHED (active) and CANCELLED (cancelled after a slot was selected;
+ *   selected_slot_id is kept, so the meeting stays on the Calendar).
  */
 function AdminCalendarPage() {
   const [matchings, setMatchings] = useState([]);
@@ -520,15 +521,52 @@ function AdminCalendarPage() {
               overflow: "auto",
             }}
           >
-            {/* Grouped controls: Today  <  September 2026  > */}
+            {/* Month nav on the left; Today on the right */}
             <Stack
               direction="row"
               spacing={1}
               alignItems="center"
+              justifyContent="space-between"
               flexWrap="wrap"
               useFlexGap
               sx={{ mb: 1.5 }}
             >
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <IconButton
+                  onClick={() => setVisibleMonth((m) => addMonths(m, -1))}
+                  aria-label="Previous month"
+                  size="small"
+                  sx={{ color: "#4A5568" }}
+                >
+                  <ChevronLeftRoundedIcon />
+                </IconButton>
+                <Typography
+                  component="h2"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1rem", sm: "1.15rem" },
+                    color: "#07142D",
+                    letterSpacing: "-0.02em",
+                    px: 0.5,
+                  }}
+                >
+                  {monthLabel}
+                </Typography>
+                <IconButton
+                  onClick={() => setVisibleMonth((m) => addMonths(m, 1))}
+                  aria-label="Next month"
+                  size="small"
+                  sx={{ color: "#4A5568" }}
+                >
+                  <ChevronRightRoundedIcon />
+                </IconButton>
+              </Stack>
               <Button
                 onClick={() => setVisibleMonth(startOfMonth(new Date()))}
                 aria-label="Go to current month"
@@ -545,34 +583,6 @@ function AdminCalendarPage() {
               >
                 Today
               </Button>
-              <IconButton
-                onClick={() => setVisibleMonth((m) => addMonths(m, -1))}
-                aria-label="Previous month"
-                size="small"
-                sx={{ color: "#4A5568" }}
-              >
-                <ChevronLeftRoundedIcon />
-              </IconButton>
-              <Typography
-                component="h2"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: "1rem", sm: "1.15rem" },
-                  color: "#07142D",
-                  letterSpacing: "-0.02em",
-                  px: 0.5,
-                }}
-              >
-                {monthLabel}
-              </Typography>
-              <IconButton
-                onClick={() => setVisibleMonth((m) => addMonths(m, 1))}
-                aria-label="Next month"
-                size="small"
-                sx={{ color: "#4A5568" }}
-              >
-                <ChevronRightRoundedIcon />
-              </IconButton>
             </Stack>
 
             {!error && eventsThisMonth.length === 0 && (

@@ -85,13 +85,30 @@ describe("toAdminCalendarEvents", () => {
       "PENDING_MENTOR",
       "PENDING_MENTEE",
       "MATCHED",
+      "CANCELLED",
       "REJECTED",
     ]);
-    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED"]);
+    expect(ADMIN_CALENDAR_LEGEND_STATUSES).toEqual(["MATCHED", "CANCELLED"]);
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("ATTENDANCE_CONFIRMED");
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("HAPPENED");
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("DID_NOT_HAPPEN");
     expect(ADMIN_STATUS_LABELS).not.toHaveProperty("FEEDBACK_COMPLETED");
+  });
+
+  test("keeps CANCELLED meetings with selectedSlot as calendar events", () => {
+    const cancelled = {
+      ...scheduledMatching,
+      id: 55,
+      status: "CANCELLED",
+      mentee: { id: 5, username: "menteeX", email: "x@ex.com" },
+    };
+    const events = toAdminCalendarEvents([unscheduledMatching, cancelled]);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      id: 55,
+      status: "CANCELLED",
+      title: "mentorA ↔ menteeX",
+    });
   });
 });
 
@@ -189,6 +206,7 @@ describe("AdminCalendarPage", () => {
 
     const legend = screen.getByLabelText(/status color legend/i);
     expect(within(legend).getByText("Matched")).toBeInTheDocument();
+    expect(within(legend).getByText("Cancelled")).toBeInTheDocument();
     expect(
       within(legend).queryByText("Waiting for mentor times")
     ).not.toBeInTheDocument();
@@ -196,6 +214,36 @@ describe("AdminCalendarPage", () => {
       within(legend).queryByText("Waiting for mentee selection")
     ).not.toBeInTheDocument();
     expect(within(legend).queryByText("Rejected")).not.toBeInTheDocument();
+  });
+
+  test("CANCELLED meeting appears, uses Cancelled label, and opens details on click", async () => {
+    const cancelledMatching = {
+      ...scheduledMatching,
+      id: 77,
+      status: "CANCELLED",
+      mentee: { id: 8, username: "menteeZ", email: "cancel@ex.com" },
+    };
+    adminService.getAdminMatchings.mockResolvedValue([
+      scheduledMatching,
+      cancelledMatching,
+    ]);
+
+    render(<AdminCalendarPage />);
+
+    const cancelledButton = await screen.findByRole("button", {
+      name: /menteeZ, Cancelled/i,
+    });
+    expect(
+      screen.getByRole("button", { name: /menteeC, Matched/i })
+    ).toBeInTheDocument();
+
+    await userEvent.click(cancelledButton);
+
+    expect(await screen.findByText("cancel@ex.com")).toBeInTheDocument();
+    expect(screen.getAllByText("Cancelled").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("link", { name: /view full details/i })
+    ).toHaveAttribute("href", "/admin/matchings/77");
   });
 
   test("clicking event opens Meeting Details panel without navigating away", async () => {
