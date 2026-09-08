@@ -10,6 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
@@ -33,6 +34,7 @@ const paperSx = {
  */
 function AdminUsersPage() {
   const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -60,6 +62,18 @@ function AdminUsersPage() {
       cancelled = true;
     };
   }, []);
+
+  // Client-side filter only — trims query and matches username or email (case-insensitive).
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const filteredUsers = trimmedQuery
+    ? users.filter((user) => {
+        const username = (user.username || "").toLowerCase();
+        const email = (user.email || "").toLowerCase();
+        return (
+          username.includes(trimmedQuery) || email.includes(trimmedQuery)
+        );
+      })
+    : users;
 
   return (
     <Box>
@@ -122,55 +136,84 @@ function AdminUsersPage() {
       )}
 
       {!loading && !error && users.length > 0 && (
-        <TableContainer sx={paperSx}>
-          <Table aria-label="Admin users" size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">
-                  Mentoring matchings
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">
-                  Mentee matchings
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Registered</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} hover>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell align="right">
-                    {user.matchingCountAsMentor}
-                  </TableCell>
-                  <TableCell align="right">
-                    {user.matchingCountAsMentee}
-                  </TableCell>
-                  <TableCell>{formatAdminDate(user.createdAt)}</TableCell>
-                  <TableCell align="right">
-                    <Button
-                      component={RouterLink}
-                      to={`/admin/users/${user.id}`}
-                      size="small"
-                      sx={{
-                        textTransform: "none",
-                        fontWeight: 700,
-                        color: "#F75F8A",
-                      }}
-                    >
-                      View details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <>
+          <TextField
+            size="small"
+            label="Search users"
+            placeholder="Search by username or email"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            inputProps={{ "aria-label": "Search users" }}
+            sx={{ mb: 3, maxWidth: 420, width: "100%" }}
+          />
+
+          {filteredUsers.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: "center",
+                py: 8,
+                px: 2,
+                borderRadius: 4,
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                border: "1px dashed rgba(113, 128, 150, 0.35)",
+              }}
+            >
+              <Typography sx={{ fontWeight: 600, color: "#07142D" }}>
+                No users found
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer sx={paperSx}>
+              <Table aria-label="Admin users" size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">
+                      Mentoring matchings
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">
+                      Mentee matchings
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Registered</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id} hover>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell align="right">
+                        {user.matchingCountAsMentor}
+                      </TableCell>
+                      <TableCell align="right">
+                        {user.matchingCountAsMentee}
+                      </TableCell>
+                      <TableCell>{formatAdminDate(user.createdAt)}</TableCell>
+                      <TableCell align="right">
+                        <Button
+                          component={RouterLink}
+                          to={`/admin/users/${user.id}`}
+                          size="small"
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 700,
+                            color: "#F75F8A",
+                          }}
+                        >
+                          View details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
       )}
     </Box>
   );
