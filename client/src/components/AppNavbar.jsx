@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   AppBar,
   Avatar,
+  Badge,
   Box,
   Button,
   Toolbar,
@@ -12,6 +13,7 @@ import Logo from "./Logo";
 import LanguageSelector from "./home/LanguageSelector";
 import { useAuth } from "../context/AuthContext";
 import matchingTranslations from "../matching/translations";
+import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 
 function getUsernameInitials(username) {
   const name = String(username || "").trim();
@@ -43,6 +45,19 @@ const navPillSx = (active) => ({
   },
 });
 
+const badgeSx = {
+  "& .MuiBadge-badge": {
+    backgroundColor: "#F75F8A",
+    color: "#FFFFFF",
+    fontWeight: 700,
+    fontSize: "0.65rem",
+    minWidth: 18,
+    height: 18,
+    border: "2px solid rgba(255,255,255,0.95)",
+    boxShadow: "0 2px 8px rgba(247, 95, 138, 0.35)",
+  },
+};
+
 /**
  * Shared authenticated app navbar.
  * On /dashboard: Logo + My Requests + Mentor Inbox + user + Logout
@@ -52,6 +67,7 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { counts } = useUnreadNotifications();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
@@ -71,8 +87,16 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
           { to: "/become-mentor", label: t.navBecomeMentor },
         ]
       : []),
-    { to: "/my-requests", label: t.navMyRequests },
-    { to: "/mentor-inbox", label: t.navMentorInbox },
+    {
+      to: "/my-requests",
+      label: t.navMyRequests,
+      badgeCount: counts.mentee,
+    },
+    {
+      to: "/mentor-inbox",
+      label: t.navMentorInbox,
+      badgeCount: counts.mentor,
+    },
   ];
 
   const handleLogout = async () => {
@@ -149,15 +173,32 @@ function AppNavbar({ language, onLanguageChange, languageAria }) {
                 (link.to !== "/dashboard" &&
                   location.pathname.startsWith(`${link.to}/`));
 
-              return (
+              const button = (
                 <Button
-                  key={link.to}
                   component={RouterLink}
                   to={link.to}
                   sx={navPillSx(active)}
                 >
                   {link.label}
                 </Button>
+              );
+
+              if (!link.badgeCount) {
+                return (
+                  <React.Fragment key={link.to}>{button}</React.Fragment>
+                );
+              }
+
+              return (
+                <Badge
+                  key={link.to}
+                  badgeContent={link.badgeCount}
+                  color="primary"
+                  overlap="circular"
+                  sx={badgeSx}
+                >
+                  {button}
+                </Badge>
               );
             })}
           </Box>

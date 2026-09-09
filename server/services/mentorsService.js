@@ -3,6 +3,10 @@ const {
   requestReschedule,
   cancelMatchedMeeting,
 } = require("./matchingService");
+const {
+  notifySlotsProposed,
+  notifyRequestRejected,
+} = require("./notificationsService");
 
 const MENTOR_TOPIC_OPTIONS = [
   "Mock Interview",
@@ -427,6 +431,16 @@ async function addSlotsToRequest(matchingId, mentorUserId, rawSlots) {
 
     await client.query("COMMIT");
 
+    try {
+      await notifySlotsProposed({
+        matchingId,
+        menteeId: updateResult.rows[0].mentee_id,
+        mentorId: mentorUserId,
+      });
+    } catch (err) {
+      console.error("notify slots proposed failed:", err.message);
+    }
+
     return {
       matching: updateResult.rows[0],
       slots: inserted,
@@ -468,6 +482,16 @@ async function rejectRequest(matchingId, mentorUserId) {
 
   if (!result.rows[0]) {
     return { error: "NOT_FOUND" };
+  }
+
+  try {
+    await notifyRequestRejected({
+      matchingId,
+      menteeId: result.rows[0].mentee_id,
+      mentorId: mentorUserId,
+    });
+  } catch (err) {
+    console.error("notify request rejected failed:", err.message);
   }
 
   return { matching: result.rows[0] };

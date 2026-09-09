@@ -45,6 +45,11 @@ app.use(
   require("./routes/matching")
 );
 app.use(
+  "/api/notifications",
+  authMiddleware,
+  require("./routes/notifications")
+);
+app.use(
   "/api/analytics",
   authMiddleware,
   require("./routes/analytics")

@@ -3,6 +3,13 @@ const {
   trackEvent,
   getMatchingAttribution,
 } = require("./analyticsService");
+const {
+  notifyMentorshipRequest,
+  notifyMoreTimesRequested,
+  notifyMeetingConfirmed,
+  notifyMeetingCancelled,
+  notifyMeetingReschedule,
+} = require("./notificationsService");
 
 /**
  * Creates a new matching request between a mentee and a mentor.
@@ -40,6 +47,16 @@ async function createMatching(menteeId, mentorId, source = "direct") {
     }
   } catch (err) {
     console.error("analytics mentoring_request_sent failed:", err.message);
+  }
+
+  try {
+    await notifyMentorshipRequest({
+      matchingId: matching.id,
+      menteeId,
+      mentorId,
+    });
+  } catch (err) {
+    console.error("notify mentorship request failed:", err.message);
   }
 
   return enrichMatching(matching);
@@ -218,7 +235,19 @@ async function requestMoreTimes(matchingId, menteeId) {
     return { error: "NOT_FOUND" };
   }
 
-  return { matching: await enrichMatching(result.rows[0]) };
+  const enrichedMoreTimes = await enrichMatching(result.rows[0]);
+
+  try {
+    await notifyMoreTimesRequested({
+      matchingId,
+      menteeId,
+      mentorId: result.rows[0].mentor_id,
+    });
+  } catch (err) {
+    console.error("notify more times failed:", err.message);
+  }
+
+  return { matching: enrichedMoreTimes };
 }
 
 /**
@@ -261,7 +290,20 @@ async function cancelMatching(matchingId, menteeId) {
     return { error: "NOT_FOUND" };
   }
 
-  return { matching: await enrichMatching(result.rows[0]) };
+  const enrichedCancel = await enrichMatching(result.rows[0]);
+
+  try {
+    await notifyMeetingCancelled({
+      matchingId,
+      menteeId,
+      mentorId: result.rows[0].mentor_id,
+      actorId: menteeId,
+    });
+  } catch (err) {
+    console.error("notify mentee cancel (pending) failed:", err.message);
+  }
+
+  return { matching: enrichedCancel };
 }
 
 /**
@@ -382,6 +424,18 @@ async function selectSlot(matchingId, menteeId, slotId) {
       console.error("analytics slot/match tracking failed:", err.message);
     }
 
+    try {
+      const meetingAt = enriched.selected_slot?.start || null;
+      await notifyMeetingConfirmed({
+        matchingId,
+        menteeId,
+        mentorId: updatedMatching.rows[0].mentor_id,
+        meetingAt,
+      });
+    } catch (err) {
+      console.error("notify meeting confirmed failed:", err.message);
+    }
+
     return { matching: enriched };
   } catch (err) {
     try {
@@ -483,7 +537,20 @@ async function requestReschedule(matchingId, actor = {}) {
     }
 
     await client.query("COMMIT");
-    return { matching: await enrichMatching(updated.rows[0]) };
+    const enrichedReschedule = await enrichMatching(updated.rows[0]);
+
+    try {
+      await notifyMeetingReschedule({
+        matchingId,
+        menteeId: updated.rows[0].mentee_id,
+        mentorId: updated.rows[0].mentor_id,
+        actorId,
+      });
+    } catch (err) {
+      console.error("notify reschedule failed:", err.message);
+    }
+
+    return { matching: enrichedReschedule };
   } catch (err) {
     try {
       await client.query("ROLLBACK");
@@ -552,7 +619,20 @@ async function cancelMatchedMeeting(matchingId, actor = {}) {
     return { error: "INVALID_STATUS" };
   }
 
-  return { matching: await enrichMatching(result.rows[0]) };
+  const enrichedMatchedCancel = await enrichMatching(result.rows[0]);
+
+  try {
+    await notifyMeetingCancelled({
+      matchingId,
+      menteeId: result.rows[0].mentee_id,
+      mentorId: result.rows[0].mentor_id,
+      actorId,
+    });
+  } catch (err) {
+    console.error("notify matched cancel failed:", err.message);
+  }
+
+  return { matching: enrichedMatchedCancel };
 }
 
 module.exports = {

@@ -13,6 +13,8 @@ const {
 } = require("../services/matchingService");
 const { getMentorProfileByUserId } = require("../services/mentorsService");
 const { ALLOWED_SOURCES } = require("../services/analyticsService");
+const { submitMeetingFeedback } = require("../services/notificationsService");
+const { validationError, buildError } = require("../utils/errors");
 
 function normalizeMatchingSource(raw) {
   if (raw === undefined || raw === null || String(raw).trim() === "") {
@@ -279,6 +281,66 @@ router.post("/:id/select-slot", async (req, res) => {
   } catch (err) {
     console.error("POST /api/matching/:id/select-slot failed:", err.message);
     return res.status(500).json({ error: "Failed to select slot" });
+  }
+});
+
+// POST /api/matching/:id/feedback - Post-meeting feedback (triggers thank-you to mentor)
+router.post("/:id/feedback", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (userId == null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchingId = Number(req.params.id);
+    if (!Number.isInteger(matchingId) || matchingId <= 0) {
+      return res
+        .status(400)
+        .json(validationError("Valid matching id is required."));
+    }
+
+    const { attended, rating, comment } = req.body || {};
+    let parsedRating = null;
+    if (rating != null && rating !== "") {
+      parsedRating = Number(rating);
+      if (
+        !Number.isInteger(parsedRating) ||
+        parsedRating < 1 ||
+        parsedRating > 5
+      ) {
+        return res
+          .status(400)
+          .json(validationError("rating must be an integer from 1 to 5."));
+      }
+    }
+
+    const result = await submitMeetingFeedback({
+      matchingId,
+      userId: Number(userId),
+      attended: attended == null ? null : Boolean(attended),
+      rating: parsedRating,
+      comment,
+    });
+
+    if (result.error === "NOT_FOUND") {
+      return res
+        .status(404)
+        .json(buildError("NOT_FOUND", "Matching not found."));
+    }
+
+    if (result.error === "INVALID_STATUS") {
+      return res.status(400).json(
+        buildError(
+          "INVALID_STATUS",
+          "Feedback is only available after a matched meeting."
+        )
+      );
+    }
+
+    return res.status(200).json(result.feedback);
+  } catch (err) {
+    console.error("POST /api/matching/:id/feedback failed:", err.message);
+    return res.status(500).json({ error: "Failed to submit feedback" });
   }
 });
 
